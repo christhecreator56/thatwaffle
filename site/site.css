@@ -1,5 +1,8 @@
 /* Page layout for That Waffle Place! Components live in twp.css. */
 html{scroll-behavior:smooth;scroll-padding-top:84px}
+html.lenis,html.lenis body{height:auto}
+html.lenis{scroll-behavior:auto}
+.lenis.lenis-stopped{overflow:hidden}
 body{overflow-x:hidden}
 h1,h2,h3,p{margin:0}
 .gutter{padding-left:max(24px,env(safe-area-inset-left,0px));padding-right:max(24px,env(safe-area-inset-right,0px))}
@@ -12,7 +15,7 @@ h1,h2,h3,p{margin:0}
 .photo{display:block;width:100%;object-fit:cover;border:3px solid var(--dune);border-radius:var(--radius-lg);box-shadow:var(--sticker-lg)}
 
 /* Header */
-.bar{position:fixed;z-index:50;left:50%;top:max(12px,env(safe-area-inset-top,0px));transform:translateX(-50%);width:min(1120px,calc(100vw - 24px));display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:6px 8px 6px 20px;background:var(--dune);color:var(--justright);border-radius:var(--radius-pill)}
+.bar{position:fixed;z-index:50;left:0;right:0;margin-inline:auto;top:max(12px,env(safe-area-inset-top,0px));width:min(1120px,calc(100vw - 24px));display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:6px 8px 6px 20px;background:var(--dune);color:var(--justright);border-radius:var(--radius-pill)}
 .bar img{height:38px;width:auto}
 .bar ul{display:flex;gap:var(--space-4);margin:0;padding:0;list-style:none;font-family:var(--font-poster);font-size:21px;letter-spacing:.05em;text-transform:uppercase}
 .bar a{color:inherit;text-decoration:none}
@@ -35,12 +38,29 @@ h1,h2,h3,p{margin:0}
 .hero__ribbon text{font-family:Ranchers,"Potta One",sans-serif;font-size:38px;letter-spacing:.06em;fill:var(--umber)}
 .hero__drip{position:absolute;z-index:6;left:0;top:0;width:100%;height:125%;pointer-events:none}
 
+.hero .sticker-type{text-shadow:.045em .05em 0 var(--dune)}
+.hero .sticker-type::before{display:none}
+.wd{display:inline-block;white-space:nowrap}
+.ch{display:inline-block}
+
+/* Section wipes, only present when motion runs */
+.wipe{display:none;position:relative;height:80vh;overflow:hidden;background:var(--from)}
+html.motion .wipe{display:block}
+.wipe i{position:absolute;background:var(--to)}
+.wipe--wedges i{border-radius:50%}
+
 /* Mood */
 .mood{position:relative;min-height:88vh;display:grid;align-items:end;overflow:hidden;background:var(--dune);color:var(--justright)}
 .mood img{position:absolute;inset:-8% 0;width:100%;height:116%;object-fit:cover;object-position:50% 62%}
 .mood::after{content:"";position:absolute;inset:0;background:rgba(46,44,37,.34)}
-.mood div{position:relative;z-index:1;padding-block:var(--space-6)}
-.mood h2{font-family:var(--font-display);font-weight:400;font-size:clamp(84px,15vw,210px);line-height:.9}
+.mood div{position:relative;z-index:1;padding-block:var(--space-6) calc(var(--space-6) + 7vw)}
+.mood h2{font-family:var(--font-display);font-weight:400;font-size:clamp(84px,15vw,210px);line-height:.9;text-shadow:.045em .05em 0 var(--dune)}
+
+.mood::before{content:"";position:absolute;z-index:1;left:0;right:0;top:0;height:34%;background:linear-gradient(var(--dune),transparent)}
+html.motion .mood{min-height:100vh;min-height:100svh}
+.mood .mood__cut{display:none;position:absolute;inset:0;z-index:3;padding:0;background:var(--umber);color:var(--justright);place-items:center}
+html.motion .mood .mood__cut{display:grid}
+.mood__cut p{font-family:var(--font-display);font-size:clamp(84px,17vw,240px);line-height:.9}
 
 /* Menu */
 .menu{background:var(--dune)}
