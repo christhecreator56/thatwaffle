@@ -1,0 +1,33 @@
+<!-- @dsCard group="Imagery" height=500 subtitle="Ingredient callouts. Arrows draw in as the waffle scrolls past." -->
+<style>
+.an{position:relative;height:490px;background:var(--surface);overflow:hidden}
+.an img{position:absolute;left:50%;top:92px;width:560px;margin-left:-280px;border:3px solid var(--dune);border-radius:var(--radius-lg)}
+.an h3{position:absolute;left:0;right:0;top:18px;margin:0;text-align:center;font-family:var(--font-display);font-weight:400;font-size:46px;color:var(--umber)}
+.an svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.an path{fill:none;stroke:var(--umber);stroke-width:3.5;stroke-linecap:round}
+.co{position:absolute;width:190px;padding:10px 14px;background:var(--surface-raised);border:2px solid var(--dune);border-radius:var(--radius-md);box-shadow:var(--sticker-sm)}
+.co b{display:block;font-family:var(--font-poster);font-weight:400;font-size:22px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink)}
+.co span{font-size:14px;line-height:20px;color:var(--ink-muted)}
+</style>
+<div class="an" id="an">
+  <h3>That Crunchy One</h3>
+  <img src="{{Photos/photo-crunch-plate.webp}}" alt="Crunchy chocolate waffle">
+  <svg viewBox="0 0 1000 490" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+    <path d="M226 142C290 130 340 150 400 190M386 172l14 18-22 3"/>
+    <path d="M776 142C720 130 690 160 640 262M640 240l0 22 19-11"/>
+    <path d="M226 372C300 400 340 390 395 340M375 343l20-3-3 21"/>
+  </svg>
+  <div class="co" style="left:30px;top:100px"><b>Golden top</b><span>Crisp, deep-set cells</span></div>
+  <div class="co" style="right:30px;top:100px"><b>Chocolate layer</b><span>Holds the whole thing</span></div>
+  <div class="co" style="left:30px;top:340px"><b>Crisp pearls</b><span>The crunch in the middle</span></div>
+</div>
+<div class="twp-scrub"><button type="button" id="play">Replay</button><input id="r" type="range" min="0" max="1000" value="0" aria-label="Scroll position"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+var ps=gsap.utils.toArray('#an path');ps.forEach(function(p){var l=p.getTotalLength();gsap.set(p,{strokeDasharray:l,strokeDashoffset:l});});
+var tl=gsap.timeline();
+tl.fromTo('#an img',{y:40,rotation:-3,scale:.92},{y:0,rotation:0,scale:1,duration:.7,ease:'back.out(1.5)'},0);
+tl.from('.co',{scale:.8,opacity:0,duration:.3,stagger:.22,ease:'back.out(2)'},.3);
+tl.to(ps,{strokeDashoffset:0,duration:.5,stagger:.22,ease:'power1.out'},.45);
+TWP.scrubber(tl,document.getElementById('r'),document.getElementById('play'));
+</script>

@@ -1,0 +1,18 @@
+<!-- @dsCard group="Signature" height=470 subtitle="Scene transition. Drag the bar to stand in for scrolling." -->
+<style>
+.dr{position:relative;height:370px;overflow:hidden;background:var(--umber)}
+.dr svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.dr .t{position:absolute;left:32px;right:32px;bottom:26px;color:var(--justright);font-family:var(--font-display);font-size:68px;line-height:1}
+.dr .next{position:absolute;left:32px;top:28px;color:var(--justright);font-family:var(--font-poster);font-weight:400;font-size:30px;letter-spacing:.02em;text-transform:uppercase;opacity:0}
+</style>
+<div class="dr"><div class="t">That Drip.</div><svg viewBox="0 0 1200 370" preserveAspectRatio="none" aria-hidden="true"><path id="p" fill="#2e2c25"></path></svg><div class="next" id="n">Chocolate scene takes over</div></div>
+<div class="twp-scrub"><button type="button" id="play">Pour</button><input id="r" type="range" min="0" max="1000" value="0" aria-label="Scroll position"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+var st={p:0},path=document.getElementById('p'),n=document.getElementById('n');
+function draw(){path.setAttribute('d',TWP.dripPath(1200,370,{p:st.p,n:10,seed:11,base:.3}));n.style.opacity=st.p>.8?(st.p-.8)*5:0;}
+draw();
+var tl=gsap.timeline({onUpdate:draw}).to(st,{p:1,duration:2.2,ease:'none',onUpdate:draw});
+TWP.scrubber(tl,document.getElementById('r'),document.getElementById('play'));
+var inner=tl.eventCallback('onUpdate');tl.eventCallback('onUpdate',function(){draw();inner&&inner();});
+</script>

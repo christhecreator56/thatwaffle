@@ -1,0 +1,34 @@
+<!-- @dsCard group="Pages" width=1280 height=640 subtitle="The sign-off: curved panel, links, sign-up, giant name cropped by the page edge." -->
+<div class="twp-foot" id="ft">
+  <div class="twp-foot__panel">
+    <div class="twp-foot__grid">
+      <div>
+        <p class="twp-foot__lead">That crunch.<br>That melt.<br>That place.</p>
+        <p class="twp-note" style="margin:0;color:var(--justright)">© 2026 That Waffle Place!</p>
+      </div>
+      <nav aria-label="Footer"><h4>Eat</h4><ul><li><a href="#menu">Menu</a></li><li><a href="#offers">Offers</a></li><li><a href="#share">Sharing boxes</a></li><li><a href="#visit">Find us</a></li></ul></nav>
+      <nav aria-label="Help"><h4>Help</h4><ul><li><a href="#privacy">Privacy policy</a></li><li><a href="#terms">Offer terms</a></li><li><a href="#opt-out">Stop WhatsApp offers</a></li><li><a href="#contact">Contact</a></li></ul></nav>
+      <div>
+        <h4>Get that offer first</h4>
+        <form class="twp-foot__mail" id="f" novalidate><input id="foot-phone" aria-label="WhatsApp number" placeholder="WhatsApp number" inputmode="numeric" maxlength="10"><button type="submit">Join</button></form>
+        <p class="twp-note" id="m" role="status" style="margin:6px 0 0;color:var(--justright)">Opens the sign-up with your consent tick.</p>
+        <div class="twp-foot__soc">
+          <a href="#instagram" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="5"/><circle cx="12" cy="12" r="3.6"/><path d="M17 7h.01"/></svg></a>
+          <a href="#facebook" aria-label="Facebook"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h-2a4 4 0 0 0-4 4v3H6v3h3v6h3v-6h3l1-3h-4V8a1 1 0 0 1 1-1h2Z"/></svg></a>
+        </div>
+      </div>
+    </div>
+    <span class="twp-foot__sign" id="s" aria-label="That Waffle Place!"></span>
+  </div>
+</div>
+<div class="twp-scrub"><button type="button" id="play">Replay</button><input id="r" type="range" min="0" max="1000" value="0" aria-label="Scroll position"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+var s=document.getElementById('s');
+'that waffle'.split('').forEach(function(c){var e=document.createElement('span');e.setAttribute('aria-hidden','true');e.textContent=c===' '?' ':c;s.appendChild(e);});
+var tl=gsap.timeline();
+tl.fromTo('#s span',{yPercent:96,rotation:function(i){return i%2?7:-7}},{yPercent:0,rotation:0,duration:.8,ease:'back.out(1.9)',stagger:.05},0);
+TWP.scrubber(tl,document.getElementById('r'),document.getElementById('play'));
+if(!TWP.calm)gsap.utils.toArray('#s span').forEach(function(e){e.style.pointerEvents='auto';e.addEventListener('pointerenter',function(){gsap.fromTo(e,{y:0},{y:-26,duration:.2,ease:'power2.out',yoyo:true,repeat:1});});});
+document.getElementById('f').addEventListener('submit',function(ev){ev.preventDefault();var m=document.getElementById('m');m.textContent=/^[6-9][0-9]{9}$/.test(this.elements[0].value.trim())?'Next step: tick your consent on the offers page.':'Enter a 10-digit mobile number, without +91.';});
+</script>

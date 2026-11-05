@@ -1,0 +1,26 @@
+<!-- @dsCard group="Signature" height=520 subtitle="The looping banner. Speed follows scroll velocity." -->
+<style>
+.rb{background:var(--umber);overflow:hidden;position:relative}
+.rb svg{display:block;width:100%;height:auto}
+.rb text{font-family:Ranchers,"Potta One",sans-serif;font-size:50px;fill:var(--umber);letter-spacing:.05em}
+.rb .jp{fill:var(--dune);font-family:"Potta One"}
+</style>
+<div class="rb">
+<svg viewBox="0 0 1200 460" role="img" aria-label="Ribbon banner repeating That Waffle Place">
+  <defs><path id="loop" d="M-140 400C120 410 330 360 500 250 640 160 860 40 1000 130 1120 210 980 400 800 360 620 320 520 110 320 70 160 40 40 70-140 40"/></defs>
+  <use href="#loop" fill="none" stroke="#ad795a" stroke-width="84" transform="translate(0 12)"/>
+  <use href="#loop" fill="none" stroke="#eed4bc" stroke-width="78"/>
+  <text dy="13"><textPath href="#loop" id="tp" startOffset="0"></textPath></text>
+</svg>
+</div>
+<div class="twp-scrub"><span class="twp-label">Scroll speed</span><input id="speed" type="range" min="0" max="100" value="22" aria-label="Scroll speed"></div>
+<script>
+var tp=document.getElementById('tp'),unit='THAT WAFFLE PLACE!  ●  ワッフル  ●  ',NS='http://www.w3.org/2000/svg';
+for(var i=0;i<7;i++){var a=document.createElementNS(NS,'tspan');a.textContent='THAT WAFFLE PLACE!  ●  ';tp.appendChild(a);var b=document.createElementNS(NS,'tspan');b.textContent='ワッフル  ●  ';b.setAttribute('class','jp');tp.appendChild(b);}
+var path=document.getElementById('loop'),one=0,off=0,speed=document.getElementById('speed');
+function measure(){var t=document.querySelector('.rb text');one=t.getComputedTextLength()/7||560;}
+if(document.fonts&&document.fonts.ready)document.fonts.ready.then(measure);else measure();
+measure();
+function tick(){if(!TWP.calm){off-=(+speed.value)/18;if(one&&off<-one)off+=one;tp.setAttribute('startOffset',off.toFixed(1));requestAnimationFrame(tick);}}
+tick();
+</script>

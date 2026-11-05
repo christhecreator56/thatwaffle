@@ -1,0 +1,26 @@
+<!-- @dsCard group="Interface" height=520 subtitle="WhatsApp consent capture. Try submitting it empty." -->
+<style>
+.of{display:grid;grid-template-columns:1fr 1.1fr;gap:36px;padding:30px 36px 38px;background:var(--umber);color:var(--justright);align-items:center}
+.of h3{margin:0 0 10px;font-family:var(--font-display);font-weight:400;font-size:64px;line-height:.98}
+.of p{margin:0;max-width:34ch}
+</style>
+<div class="of">
+  <div><h3>Get that offer first.</h3><p>Offers land on WhatsApp. Say yes here and we'll send them. Nobody gets a message without saying yes.</p></div>
+  <form class="twp-form" id="f" novalidate>
+    <div class="twp-field"><label for="optin-name">Your name</label><div class="twp-input"><input id="optin-name" name="name" autocomplete="name"></div></div>
+    <div class="twp-field"><label for="optin-phone">WhatsApp number</label><div class="twp-input"><span>+91</span><input id="optin-phone" name="phone" inputmode="numeric" autocomplete="tel-national" maxlength="10" aria-describedby="optin-err"></div></div>
+    <label class="twp-check" for="optin-yes"><input id="optin-yes" type="checkbox" name="optedIn"><span>Yes, send me That Waffle Place! offers on WhatsApp. I can reply STOP any time.</span></label>
+    <p class="twp-err" id="optin-err" role="alert"></p>
+    <button class="twp-btn" type="submit">Count me in</button>
+  </form>
+</div>
+<script>
+var f=document.getElementById('f'),e=document.getElementById('optin-err');
+f.addEventListener('submit',function(ev){ev.preventDefault();
+  var n=f.name.value.trim(),p=f.phone.value.trim();
+  if(!n){e.textContent='Add your name so we know who to thank.';return f.name.focus();}
+  if(!/^[6-9][0-9]{9}$/.test(p)){e.textContent='Enter a 10-digit mobile number, without +91.';return f.phone.focus();}
+  if(!f.optedIn.checked){e.textContent='Tick the box first. We only message people who say yes.';return f.optedIn.focus();}
+  f.innerHTML='<div class="twp-ok" role="status"><span>You\'re in, '+n.replace(/[<>&]/g,'')+'. Watch WhatsApp for That Offer.</span></div>';
+});
+</script>

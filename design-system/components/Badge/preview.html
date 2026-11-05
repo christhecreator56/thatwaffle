@@ -1,0 +1,27 @@
+<!-- @dsCard group="Signature" height=430 subtitle="Four colourways and the seal. Click to stamp." -->
+<style>
+.b-row{display:grid;grid-template-columns:repeat(4,1fr) 110px;gap:16px;align-items:center;padding:28px 24px;min-height:300px}
+.b-row button{appearance:none;border:0;background:none;padding:0;cursor:pointer;min-width:0}
+.b-row img{width:100%}
+.b-scene{background:var(--umber);padding:18px 24px;color:var(--justright);display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+</style>
+<div class="b-row" id="row">
+  <button type="button" aria-label="Stamp the classic badge"><img src="{{Badges/badge-waffle.svg}}" alt="Classic waffle-gold badge"></button>
+  <button type="button" aria-label="Stamp the umber badge"><img src="{{Badges/badge-umber.svg}}" alt="Burnt umber badge"></button>
+  <button type="button" aria-label="Stamp the lily badge"><img src="{{Badges/badge-lily.svg}}" alt="Lily badge"></button>
+  <button type="button" aria-label="Stamp the dune badge"><img src="{{Badges/badge-dune.svg}}" alt="Dune badge"></button>
+  <button type="button" aria-label="Stamp the seal"><img src="{{Badges/hanko-waffuru.svg}}" alt="Vertical ワッフル seal"></button>
+</div>
+<div class="b-scene"><span class="twp-label">Motion: stamp down, 280ms, then a slow idle wobble</span><span class="twp-label">Minimum size 96px</span></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+var imgs=[].slice.call(document.querySelectorAll('#row img'));
+function stamp(el,delay){
+  if(TWP.calm)return;
+  gsap.fromTo(el,{scale:1.7,rotation:-16,opacity:0},{scale:1,rotation:0,opacity:1,duration:.28,delay:delay||0,ease:'power4.in',onComplete:function(){
+    gsap.fromTo(el,{scaleX:1.1,scaleY:.9},{scaleX:1,scaleY:1,duration:.5,ease:'elastic.out(1,.4)'});
+  }});
+}
+imgs.forEach(function(el,i){stamp(el,i*.09);el.parentNode.addEventListener('click',function(){stamp(el)});
+  if(!TWP.calm)gsap.to(el,{rotation:i%2?2.5:-2.5,duration:2.6+i*.3,ease:'sine.inOut',yoyo:true,repeat:-1,delay:1.2});});
+</script>

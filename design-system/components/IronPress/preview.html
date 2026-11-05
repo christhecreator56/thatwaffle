@@ -1,0 +1,20 @@
+<!-- @dsCard group="Signature" height=470 subtitle="First-visit loader: batter cells brown outward from the centre." -->
+<style>
+.ip{display:grid;grid-template-columns:340px 1fr;gap:40px;align-items:center;padding:28px 36px;background:var(--dune);color:var(--justright);min-height:370px}
+.ip .disc{position:relative;width:310px;height:310px;border-radius:50%;overflow:hidden;background:var(--logo-waffle);transform:rotate(45deg);display:grid;grid-template-columns:repeat(7,1fr);gap:7px;padding:8px}
+.ip .cell{border-radius:5px;background:#eed4bc}
+.ip h3{margin:0 0 8px;font-family:var(--font-display);font-weight:400;font-size:68px;line-height:1;color:var(--yamabuki)}
+.ip p{margin:0;max-width:44ch}
+</style>
+<div class="ip"><div class="disc" id="d"></div><div><h3>Browning…</h3><p>Runs once per visit, under 1.2 seconds, and the page is already usable behind it. Returning visitors skip it. The real site ties it to actual font and hero image load.</p></div></div>
+<div class="twp-scrub"><button type="button" id="play">Replay</button><input id="r" type="range" min="0" max="1000" value="0" aria-label="Loader progress"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+var d=document.getElementById('d');for(var i=0;i<49;i++){var c=document.createElement('div');c.className='cell';d.appendChild(c);}
+var tl=gsap.timeline();
+tl.to('.ip .cell',{backgroundColor:'#f8b500',duration:.3,stagger:{from:'center',grid:[7,7],amount:.5}},0);
+tl.to('.ip .cell',{backgroundColor:'#e48c2e',duration:.3,stagger:{from:'center',grid:[7,7],amount:.5}},.3);
+tl.to('.ip .cell',{backgroundColor:'#b76b27',borderRadius:2,duration:.25,stagger:{from:'center',grid:[7,7],amount:.4}},.65);
+tl.fromTo('.ip .disc',{scale:1},{scale:1.05,duration:.12,yoyo:true,repeat:1,ease:'power2.inOut'},1.15);
+TWP.scrubber(tl,document.getElementById('r'),document.getElementById('play'));
+</script>

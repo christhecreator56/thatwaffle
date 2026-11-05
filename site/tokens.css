@@ -1,0 +1,13 @@
+/* That Waffle Place! tokens, matching design-system/tokens.json */
+:root{
+  color-scheme:light;
+  --umber:#8a2823;--umber-deep:#5f1a17;--justright:#eed4bc;--dune:#2e2c25;--santafe:#ad795a;--lily:#c4acb4;
+  --kinari:#fbfaf5;--yamabuki:#f8b500;--seiji:#7ebea5;--logo-waffle:#f7c368;
+  --surface:var(--justright);--surface-raised:var(--kinari);--ink:var(--dune);--ink-soft:#5a4538;--ink-muted:#5a4538;
+  --accent:var(--umber);--on-accent:var(--justright);--cta:var(--yamabuki);--on-cta:var(--dune);--line:#6b5546;--focus:var(--umber);
+  --sticker-sm:3px 3px 0 #2e2c25;--sticker-md:6px 6px 0 #2e2c25;--sticker-lg:10px 10px 0 #2e2c25;
+  --space-1:4px;--space-2:8px;--space-3:16px;--space-4:24px;--space-5:40px;--space-6:64px;--space-7:104px;
+  --radius-sm:6px;--radius-md:14px;--radius-lg:28px;--radius-pill:999px;--radius-panel:240px;
+  --font-display:Modak,"Arial Black",sans-serif;--font-poster:Ranchers,"Arial Narrow",sans-serif;
+  --font-kana:"Potta One",sans-serif;--font-body:"Zen Maru Gothic",system-ui,sans-serif;--font-script:Yellowtail,cursive;
+}

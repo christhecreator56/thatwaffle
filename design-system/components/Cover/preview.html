@@ -1,0 +1,32 @@
+<!-- @dsCard height=300 -->
+<!--
+blocks: umber 400x120, dune 176x120, santafe 176x120, lily 104x120, justright relief 104x120 across the top band.
+arrangement: top-band skeleton, flush strip of unequal blocks bleeding off both edges, because the name is too wide for the 440px zone.
+pattern: literal motif row, quarter-circle wedges cut from the blocks, because the waffle wedge in the logo is a quarter circle and four make a whole.
+scales: band height is space-7 + space-3 (120px), block widths are multiples of space-7 and space-1, wedge radii equal the band height, square corners throughout.
+-->
+<style>
+.cv{position:relative;width:960px;height:300px;background:var(--surface);overflow:hidden}
+.cv svg{position:absolute;left:0;top:0;width:960px;height:120px;display:block}
+.cv .ruri{fill:var(--umber)}.cv .hi{fill:var(--santafe)}.cv .yama{fill:var(--lily)}.cv .koku{fill:var(--dune)}.cv .tori{fill:var(--justright)}.cv .shu{fill:var(--umber)}.cv .konjo{fill:var(--santafe)}
+.cv .t{position:absolute;left:40px;right:40px;top:144px}
+.cv h1{margin:0;font-family:var(--font-display);font-weight:400;font-size:96px;line-height:.9;color:var(--ink);white-space:nowrap}
+.cv p{margin:10px 0 0;font-size:14px;line-height:22px;color:var(--ink-muted)}
+</style>
+<div class="cv">
+<svg viewBox="0 0 960 120" aria-hidden="true">
+  <rect class="ruri" x="0" y="0" width="400" height="120"/>
+  <rect class="hi" x="400" y="0" width="176" height="120"/>
+  <rect class="yama" x="576" y="0" width="176" height="120"/>
+  <rect class="tori" x="752" y="0" width="104" height="120"/>
+  <rect class="konjo" x="856" y="0" width="104" height="120"/>
+  <path class="tori" d="M40 120A120 120 0 0 1 160 0V120Z"/>
+  <path class="yama" d="M280 120A120 120 0 0 0 160 0V120Z"/>
+  <path class="yama" d="M400 0A120 120 0 0 0 520 120V0Z"/>
+  <path class="tori" d="M576 120A120 120 0 0 1 696 0V120Z"/>
+  <path class="shu" d="M696 0A120 120 0 0 1 752 16V120H696Z"/>
+  <path class="konjo" d="M752 120A104 104 0 0 1 856 16V120Z"/>
+  <path class="yama" d="M960 120A104 104 0 0 0 856 16V120Z"/>
+</svg>
+<div class="t"><h1>That Waffle Place!</h1><p>Wedge-cut waffles, warm picnic colour.</p></div>
+</div>

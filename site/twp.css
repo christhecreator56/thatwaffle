@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=Modak&family=Ranchers&family=Potta+One&family=Yellowtail&family=Zen+Maru+Gothic:wght@500;700;900&display=swap');
+
+/* That Waffle Place! component layer. Every colour comes from tokens.css. */
+html,body{margin:0}
+body{background:var(--surface);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:26px;font-weight:500;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+img{display:block;max-width:100%}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+
+.twp-label{font-family:var(--font-poster);font-weight:400;font-size:20px;line-height:1.1;letter-spacing:.05em;text-transform:uppercase}
+.twp-note{font-size:14px;line-height:22px;color:var(--ink-muted)}
+
+/* Sticker type: fat eggshell letters on a hard dune block */
+.sticker-type{position:relative;display:inline-block;isolation:isolate;font-family:var(--font-display);font-weight:400;line-height:.9;color:var(--justright);--sticker:var(--dune);white-space:nowrap;letter-spacing:.005em}
+.sticker-type::before{content:attr(data-t);position:absolute;left:.045em;top:.05em;z-index:-1;color:var(--sticker)}
+
+/* Buttons */
+.twp-btn{appearance:none;border:3px solid var(--dune);border-radius:var(--radius-pill);min-height:52px;padding:0 var(--space-4);display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);cursor:pointer;background:var(--cta);color:var(--on-cta);box-shadow:var(--sticker-md);font-family:var(--font-poster);font-weight:400;font-size:26px;letter-spacing:.04em;text-transform:uppercase;text-decoration:none;transition:transform .16s cubic-bezier(.3,1.6,.5,1),box-shadow .16s ease-out}
+.twp-btn:hover{transform:translate(-2px,-2px) rotate(-1deg);box-shadow:8px 8px 0 var(--dune)}
+.twp-btn:active{transform:translate(5px,5px) scale(.98,.94);box-shadow:var(--sticker-sm)}
+.twp-btn[disabled]{background:var(--surface-raised);color:var(--ink-muted);box-shadow:none;cursor:not-allowed;transform:none}
+.twp-btn--umber{background:var(--umber);color:var(--justright)}
+.twp-btn--ghost{background:transparent;color:var(--ink);border-color:currentColor;box-shadow:none}
+.twp-btn--ghost:hover{box-shadow:none}
+.twp-btn svg{width:22px;height:22px;flex:none}
+
+/* Scrubber: stands in for page scroll inside a preview */
+.twp-scrub{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-2) var(--space-3);background:var(--surface-raised);border-top:2px solid var(--line)}
+.twp-scrub input{flex:1;min-width:0;accent-color:var(--umber);height:28px}
+.twp-scrub button{appearance:none;border:2px solid var(--line);background:transparent;color:var(--ink);border-radius:var(--radius-pill);min-height:36px;padding:0 var(--space-3);font-family:var(--font-poster);font-weight:400;font-size:18px;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
+
+/* Waffle pattern fills */
+.twp-hishi{background-color:var(--yamabuki);background-image:linear-gradient(45deg,var(--santafe) 42%,transparent 42%,transparent 58%,var(--santafe) 58%),linear-gradient(-45deg,var(--santafe) 42%,transparent 42%,transparent 58%,var(--santafe) 58%);background-size:44px 44px;background-blend-mode:normal}
+
+/* Menu card */
+.twp-card{position:relative;display:flex;flex-direction:column;gap:var(--space-2);min-width:0;padding:var(--space-4);border:3px solid var(--dune);border-radius:var(--radius-lg);box-shadow:var(--sticker-lg);color:var(--fg);background:var(--bg);overflow:visible;transition:transform .28s cubic-bezier(.3,1.5,.5,1),box-shadow .2s ease-out}
+.twp-card:hover,.twp-card:focus-within{transform:rotate(-1.4deg) translate(-3px,-5px);box-shadow:14px 15px 0 var(--dune)}
+.twp-card img{width:100%;height:190px;object-fit:contain;filter:drop-shadow(0 12px 10px rgba(46,44,37,.35));transition:transform .34s cubic-bezier(.3,1.7,.45,1)}
+.twp-card:hover img,.twp-card:focus-within img{transform:scale(1.1) rotate(5deg) translateY(-10px)}
+.twp-card h3{margin:0;font-family:var(--font-poster);font-weight:400;font-size:38px;line-height:1;letter-spacing:.02em;text-transform:uppercase;text-wrap:balance}
+.twp-card p{margin:0;font-size:15px;line-height:23px}
+.twp-card footer{margin-top:auto;padding-top:var(--space-2);display:flex;justify-content:space-between;align-items:center;gap:var(--space-2)}
+
+/* Offer ticket */
+.twp-ticket{--notch:15px;display:grid;grid-template-columns:230px 1fr;min-width:0;background:var(--kinari);color:var(--dune);border-radius:var(--radius-lg);filter:drop-shadow(8px 8px 0 var(--dune));-webkit-mask:radial-gradient(circle var(--notch) at 230px 0,#0000 98%,#000) top,radial-gradient(circle var(--notch) at 230px 100%,#0000 98%,#000) bottom;-webkit-mask-size:100% 51%;-webkit-mask-repeat:no-repeat;mask:radial-gradient(circle var(--notch) at 230px 0,#0000 98%,#000) top,radial-gradient(circle var(--notch) at 230px 100%,#0000 98%,#000) bottom;mask-size:100% 51%;mask-repeat:no-repeat}
+.twp-ticket__poster{position:relative;background:var(--umber);display:grid;place-items:center;padding:var(--space-3);border-right:3px dashed var(--dune);min-height:230px}
+.twp-ticket__poster img{width:100%}
+.twp-ticket__body{padding:var(--space-4);display:flex;flex-direction:column;gap:var(--space-2);min-width:0}
+.twp-ticket h3{margin:0;font-family:var(--font-display);font-weight:400;font-size:44px;line-height:1;color:var(--umber)}
+.twp-ticket dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px var(--space-3)}
+.twp-ticket dt{font-family:var(--font-poster);font-weight:400;font-size:18px;letter-spacing:.05em;text-transform:uppercase;color:#5a4538}
+.twp-ticket dd{margin:0;font-size:15px;line-height:23px}
+
+/* Opt-in form */
+.twp-form{display:grid;gap:var(--space-3);padding:var(--space-4);background:var(--surface-raised);color:var(--ink);border:3px solid var(--dune);border-radius:var(--radius-lg);box-shadow:var(--sticker-lg);min-width:0}
+.twp-field{display:grid;gap:var(--space-1);min-width:0}
+.twp-field label{font-family:var(--font-poster);font-weight:400;font-size:20px;letter-spacing:.05em;text-transform:uppercase}
+.twp-input{display:flex;align-items:center;min-height:52px;border:2px solid var(--line);border-radius:var(--radius-md);background:var(--surface);overflow:hidden}
+.twp-input:focus-within{outline:3px solid var(--focus);outline-offset:2px}
+.twp-input span{padding:0 0 0 var(--space-3);font-weight:700}
+.twp-input input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;min-height:48px;padding:0 var(--space-3)}
+.twp-check{display:grid;grid-template-columns:28px 1fr;gap:var(--space-2);align-items:start;font-size:15px;line-height:23px;cursor:pointer}
+.twp-check input{width:24px;height:24px;margin:2px 0 0;accent-color:var(--umber)}
+.twp-err{min-height:22px;margin:0;font-size:14px;line-height:22px;font-weight:700;color:var(--ink)}
+.twp-ok{display:flex;gap:var(--space-3);align-items:center;padding:var(--space-3);background:var(--seiji);color:var(--dune);border-radius:var(--radius-md);font-weight:700}
+
+/* Footer panel */
+.twp-foot{position:relative;background:var(--dune);padding-top:var(--space-5);overflow:hidden}
+.twp-foot__panel{position:relative;background:var(--umber);color:var(--justright);border-top-left-radius:240px;padding:var(--space-6) var(--space-6) 0 96px;overflow:hidden}
+.twp-foot__grid{display:grid;grid-template-columns:1.5fr .8fr .9fr 1.5fr;gap:var(--space-5);align-items:start}
+.twp-foot h4{margin:0 0 var(--space-2);font-family:var(--font-poster);font-weight:400;font-size:22px;letter-spacing:.05em;text-transform:uppercase}
+.twp-foot ul{margin:0;padding:0;list-style:none;display:grid;gap:2px}
+.twp-foot a{color:inherit;text-decoration:none;font-size:15px;line-height:26px;background:linear-gradient(currentColor,currentColor) 0 100%/0 2px no-repeat;transition:background-size .22s ease-out}
+.twp-foot a:hover,.twp-foot a:focus-visible{background-size:100% 2px}
+.twp-foot__lead{margin:0 0 var(--space-3);font-family:var(--font-poster);font-size:38px;line-height:1.02;letter-spacing:.02em;text-transform:uppercase}
+.twp-foot__mail{display:flex;align-items:center;border:2px solid var(--justright);border-radius:var(--radius-pill);padding:4px;min-width:0}
+.twp-foot__mail input{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--justright);font:inherit;font-size:15px;min-height:42px;padding:0 var(--space-3)}
+.twp-foot__mail input::placeholder{color:var(--justright);opacity:.85}
+.twp-foot__mail button{appearance:none;border:0;border-radius:var(--radius-pill);background:var(--justright);color:var(--dune);min-height:42px;padding:0 var(--space-3);font-family:var(--font-poster);font-size:20px;letter-spacing:.04em;text-transform:uppercase;cursor:pointer}
+.twp-foot__mail:focus-within{outline:3px solid var(--yamabuki);outline-offset:2px}
+.twp-foot__soc{display:flex;gap:var(--space-2);margin-top:var(--space-3)}
+.twp-foot__soc a{width:44px;height:44px;border-radius:50%;background:var(--justright);color:var(--umber);display:grid;place-items:center;background-size:auto}
+.twp-foot__soc svg{width:22px;height:22px}
+.twp-foot__sign{display:block;margin:var(--space-3) -32px -78px -66px;font-family:var(--font-display);font-size:228px;line-height:.82;white-space:nowrap;color:var(--justright);pointer-events:none}
+.twp-foot__sign span{display:inline-block;will-change:transform}

@@ -1,0 +1,6 @@
+# Raw client files stay local
+*.jpeg
+*.pdf
+node_modules/
+.vercel/
+.claude/

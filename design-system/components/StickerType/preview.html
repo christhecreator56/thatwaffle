@@ -1,0 +1,21 @@
+<!-- @dsCard group="Signature" height=400 subtitle="The headline treatment, plus the slap entrance." -->
+<style>
+.st{background:var(--umber);padding:30px 40px 26px;display:grid;gap:14px;justify-items:start;overflow:hidden}
+.st .a{font-size:150px}
+.st .b{font-size:150px;margin-left:44px;--sticker:var(--santafe)}
+.st p{margin:6px 0 0;color:var(--justright);font-family:var(--font-poster);font-weight:400;font-size:34px;letter-spacing:.04em;text-transform:uppercase}
+</style>
+<div class="st">
+  <span class="sticker-type a" data-t="that crunch.">that crunch.</span>
+  <span class="sticker-type b" data-t="that melt.">that melt.</span>
+  <p>Display in Modak, subline in Ranchers</p>
+</div>
+<div class="twp-scrub"><button type="button" id="again">Replay</button><span class="twp-note">Each line lands like a sticker pressed on by hand, 160ms apart.</span></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+function slap(){
+  if(TWP.calm)return;
+  gsap.fromTo('.st .sticker-type',{scale:1.5,rotation:function(i){return i?5:-5},opacity:0,transformOrigin:'30% 60%'},{scale:1,rotation:function(i){return i?1.5:-1.5},opacity:1,duration:.32,ease:'back.out(2.6)',stagger:.16});
+}
+slap();document.getElementById('again').addEventListener('click',slap);
+</script>
