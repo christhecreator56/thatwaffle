@@ -237,8 +237,7 @@
     gsap.from('.share__pics .a', { scale: .8, rotation: 9, opacity: 0, duration: .7, ease: 'back.out(1.5)', scrollTrigger: { trigger: '.share__pics', start: 'top 75%' } });
     gsap.from('.share__pics .b', { y: 70, rotation: -14, opacity: 0, duration: .6, delay: .15, ease: 'back.out(1.6)', scrollTrigger: { trigger: '.share__pics', start: 'top 75%' } });
     gsap.from('.offers__badge', { scale: 1.8, rotation: -24, opacity: 0, duration: .28, ease: 'power4.in', scrollTrigger: { trigger: '.offers__badge', start: 'top 85%' } });
-    gsap.from('.visit dt,.visit dd', { x: -24, opacity: 0, duration: .35, stagger: .04, ease: 'power2.out', scrollTrigger: { trigger: '.visit dl', start: 'top 85%' } });
-    gsap.fromTo('#fly', { x: -160, y: 50 }, { x: 40, y: -20, ease: 'none', scrollTrigger: { trigger: '.visit', start: 'top bottom', end: 'top 20%', scrub: true } });
+    gsap.from('.visit__card', { x: -60, opacity: 0, duration: .6, ease: 'back.out(1.5)', scrollTrigger: { trigger: '.visit', start: 'top 60%' } });
     gsap.from('.twp-foot__grid > *', { y: 30, opacity: 0, duration: .5, stagger: .08, ease: 'power2.out', scrollTrigger: { trigger: '.twp-foot__panel', start: 'top 75%' } });
     gsap.from('#sign span', { yPercent: 96, rotation: function (i) { return i % 2 ? 7 : -7; }, duration: .8, ease: 'back.out(1.9)', stagger: .05, scrollTrigger: { trigger: '.twp-foot__panel', start: 'top 55%' } });
 

@@ -114,19 +114,23 @@
   <div class="wrap offers__list" id="offerList"></div>
 </section>
 
-<section class="scene visit gutter" id="visit" aria-labelledby="visit-title">
-  <div class="wrap visit__grid">
-    <div>
-      <h2 class="lean" id="visit-title">find that place</h2>
-      <dl>
-        <dt>Address</dt><dd><a href="https://www.google.com/maps/search/?api=1&query=No.38%2C%20Co-operative%20Colony%2C%20Teynampet%2C%20Chennai%20600018" target="_blank" rel="noopener">No.38, Co-operative Colony, Ground floor,<br>Teynampet, Chennai 600018</a></dd>
-        <dt>Hours</dt><dd id="hours"><span class="todo">Coming soon</span></dd>
-        <dt>Phone</dt><dd><a href="tel:+918056448118">+91 80564 48118</a></dd>
-        <dt>Email</dt><dd><a href="mailto:sfourhospitality@gmail.com">sfourhospitality@gmail.com</a></dd>
-        <dt>Instagram</dt><dd><a href="https://www.instagram.com/thatwaffleplace" target="_blank" rel="noopener">@thatwaffleplace</a></dd>
-      </dl>
+<section class="visit" id="visit" aria-labelledby="visit-title">
+  <div class="visit__map" id="map" role="region" aria-label="Map showing That Waffle Place in Teynampet, Chennai"></div>
+  <div class="visit__card">
+    <span class="twp-label">Teynampet, Chennai</span>
+    <h2 class="lean" id="visit-title">find that place</h2>
+    <dl>
+      <dt>Address</dt><dd>No.38, Co-operative Colony, Ground floor, Teynampet, Chennai 600018</dd>
+      <dt>Hours</dt><dd id="hours"><span class="todo">Coming soon</span></dd>
+      <dt>Phone</dt><dd><a href="tel:+918056448118">+91 80564 48118</a></dd>
+      <dt>Email</dt><dd><a href="mailto:sfourhospitality@gmail.com">sfourhospitality@gmail.com</a></dd>
+      <dt>Insta</dt><dd><a href="https://www.instagram.com/thatwaffleplace" target="_blank" rel="noopener">@thatwaffleplace</a></dd>
+    </dl>
+    <div class="visit__cta">
+      <a class="twp-btn" href="https://www.google.com/maps/dir/?api=1&amp;destination=That+Waffle+Place%2C+Cooperative+Colony%2C+Teynampet%2C+Chennai" target="_blank" rel="noopener">Get directions</a>
+      <button class="twp-btn twp-btn--ghost" type="button" id="howFar">How far am I?</button>
     </div>
-    <img class="visit__wedge" id="fly" src="assets/spot-flying-wedge.svg" alt="" loading="lazy">
+    <p class="visit__far" id="farMsg" role="status"></p>
   </div>
 </section>
 
@@ -151,5 +155,6 @@
 <script src="config.js"></script>
 <script src="live.js"></script>
 <script src="main.js"></script>
+<script src="locator.js"></script>
 </body>
 </html>

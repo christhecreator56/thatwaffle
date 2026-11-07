@@ -119,14 +119,31 @@ html.motion .inside:not(.in) .inside__arrows path{stroke-dashoffset:1;opacity:0}
 .offers__list .twp-ticket__poster{background:var(--dune)}
 .offers__list .twp-ticket__poster img{max-height:220px;object-fit:contain;border-radius:var(--radius-md)}
 
-/* Visit */
-.visit{background:var(--lily);color:var(--dune);overflow:hidden}
-.visit__grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.8fr);gap:var(--space-6);align-items:center}
-.visit dl{display:grid;grid-template-columns:auto 1fr;gap:var(--space-2) var(--space-4);margin:var(--space-4) 0 0;font-size:18px}
-.visit dt{font-family:var(--font-poster);font-size:24px;letter-spacing:.05em;text-transform:uppercase}
+/* Visit: a branded map with a sticker card over it */
+.visit{position:relative;background:#eed4bc;color:var(--dune);overflow:hidden}
+.visit .visit__map{position:absolute;inset:0;background:var(--lily) url(assets/pattern-seigaiha.svg) 0 0/120px 60px;background-blend-mode:soft-light}
+.visit .visit__map.ready{background:#eed4bc}
+.visit__map .maplibregl-canvas{outline:0}
+.visit__map .maplibregl-ctrl-group{border-radius:var(--radius-md);box-shadow:var(--sticker-sm);border:2px solid var(--dune)}
+.visit__card{position:relative;z-index:2;display:grid;gap:var(--space-2);width:min(500px,calc(100vw - 32px));margin:calc(var(--space-6) + 24px) 0 var(--space-5) clamp(16px,6vw,96px);padding:var(--space-4);background:var(--kinari);border:3px solid var(--dune);border-radius:var(--radius-lg);box-shadow:var(--sticker-lg)}
+.visit__card h2{margin:0;font-family:var(--font-display);font-weight:400;font-size:clamp(60px,6.4vw,84px);line-height:.92;color:var(--umber)}
+.visit dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px var(--space-3);margin:var(--space-2) 0;font-size:16px;line-height:23px}
+.visit dt{font-family:var(--font-poster);font-size:21px;line-height:23px;letter-spacing:.05em;text-transform:uppercase}
 .visit dd{margin:0;min-width:0;overflow-wrap:anywhere}
-.visit a{color:inherit;text-underline-offset:3px}
-.visit__wedge{width:min(100%,340px);margin-inline:auto}
+.visit a:not(.twp-btn){color:inherit;text-underline-offset:3px}
+.visit__cta{display:flex;flex-wrap:wrap;gap:var(--space-3)}
+.visit__cta .twp-btn{flex:1 1 auto;font-size:22px;padding:0 var(--space-3)}
+.visit__far{margin:0;min-height:23px;font-size:15px;line-height:23px;font-weight:700}
+
+.pin{position:relative;width:84px;height:84px;cursor:default}
+.pin img{position:relative;width:84px;height:84px;filter:drop-shadow(0 8px 6px rgba(46,20,16,.4));transform-origin:50% 90%}
+.pin b{position:absolute;left:50%;top:90px;transform:translateX(-50%);white-space:nowrap;padding:1px 12px;background:var(--dune);color:var(--justright);border-radius:var(--radius-pill);font-family:var(--font-poster);font-weight:400;font-size:19px;letter-spacing:.04em;text-transform:uppercase}
+.pin__pulse{position:absolute;inset:0;border-radius:50%;background:var(--umber);opacity:0}
+.pin.in .pin__pulse{animation:pulse 2.2s ease-out 2.6s infinite}
+.pin.in img{animation:stamp .5s cubic-bezier(.3,1.7,.5,1) 2.4s both}
+.pin__me{width:18px;height:18px;border-radius:50%;background:var(--umber);border:3px solid var(--kinari);box-shadow:var(--sticker-sm)}
+@keyframes pulse{0%{transform:scale(.9);opacity:.45}100%{transform:scale(2.3);opacity:0}}
+@keyframes stamp{0%{transform:scale(1.7) translateY(-30px);opacity:.3}60%{transform:scale(.92,1.06)}100%{transform:none;opacity:1}}
 
 /* Footer overrides so the giant name fills any screen */
 .twp-foot__panel{padding:var(--space-6) clamp(24px,5vw,64px) 0 clamp(24px,7.5vw,96px);border-top-left-radius:clamp(96px,18vw,240px)}
@@ -152,10 +169,15 @@ html.motion .inside:not(.in) .inside__arrows path{stroke-dashoffset:1;opacity:0}
   .facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:30px 12px 24px}
   .facts li{position:relative;left:auto!important;right:auto!important;top:auto!important;width:auto;padding:8px;font-size:0;line-height:0}
   .facts b{font-size:19px;line-height:1.05;text-align:center}
-  .share__grid,.offers__grid,.visit__grid{grid-template-columns:minmax(0,1fr);gap:var(--space-5)}
+  .share__grid,.offers__grid{grid-template-columns:minmax(0,1fr);gap:var(--space-5)}
   .offers__list .twp-ticket{grid-template-columns:minmax(0,1fr);-webkit-mask:none;mask:none}
   .offers__list .twp-ticket__poster{border-right:0;border-bottom:3px dashed var(--dune);min-height:0;border-radius:var(--radius-lg) var(--radius-lg) 0 0}
+  .visit .visit__map{position:relative;inset:auto;height:48vh;height:48svh}
+  .visit__card{width:auto;margin:-28px 12px 24px}
+  html.stage-on .visit{display:block}
+  .pin,.pin img{width:64px;height:64px}
+  .pin b{top:68px;font-size:17px}
   .twp-foot__grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
   .twp-foot__grid>div{grid-column:1/-1}
 }
-@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.pin.in img,.pin.in .pin__pulse{animation:none}}
