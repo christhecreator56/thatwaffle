@@ -43,11 +43,22 @@ h1,h2,h3,p{margin:0}
 .wd{display:inline-block;white-space:nowrap}
 .ch{display:inline-block}
 
-/* Section wipes, only present when motion runs */
-.wipe{display:none;position:relative;height:80vh;overflow:hidden;background:var(--from)}
-html.motion .wipe{display:block}
-.wipe i{position:absolute;background:var(--to)}
-.wipe--wedges i{border-radius:50%}
+/* The stage: full-screen scenes stacked in one place, revealed by shape */
+.edge{display:none}
+html.stage-on .stage{position:relative;z-index:1;height:100vh;height:100svh;overflow:hidden;background:var(--dune)}
+html.stage-on .stage>section,html.stage-on .edge{display:block;position:absolute;inset:0;height:100%;min-height:0;margin:0;isolation:isolate}
+html.stage-on .mood{display:grid}
+html.stage-on .edge{background:var(--justright)}
+html.stage-on .menu__scroll{overflow:hidden;height:100%}
+html.stage-on .dish{height:100%}
+html.stage-on .menu__track{height:100%}
+html.stage-on .share{margin-top:-100vh;margin-top:-100svh}
+html.stage-on .share,html.stage-on .offers,html.stage-on .visit{position:relative;min-height:100vh;min-height:100svh;display:grid;align-content:center;overflow:hidden;--dim:0}
+html.stage-on .share{z-index:2}
+html.stage-on .offers{z-index:3}
+html.stage-on .visit{z-index:4}
+html.stage-on .twp-foot{position:relative;z-index:5}
+html.stage-on .share::after,html.stage-on .offers::after,html.stage-on .visit::after{content:"";position:absolute;inset:0;z-index:9;background:var(--dune);opacity:var(--dim);pointer-events:none}
 
 /* Mood */
 .mood{position:relative;min-height:88vh;display:grid;align-items:end;overflow:hidden;background:var(--dune);color:var(--justright)}
@@ -57,10 +68,6 @@ html.motion .wipe{display:block}
 .mood h2{font-family:var(--font-display);font-weight:400;font-size:clamp(84px,15vw,210px);line-height:.9;text-shadow:.045em .05em 0 var(--dune)}
 
 .mood::before{content:"";position:absolute;z-index:1;left:0;right:0;top:0;height:34%;background:linear-gradient(var(--dune),transparent)}
-html.motion .mood{min-height:100vh;min-height:100svh}
-.mood .mood__cut{display:none;position:absolute;inset:0;z-index:3;padding:0;background:var(--umber);color:var(--justright);place-items:center}
-html.motion .mood .mood__cut{display:grid}
-.mood__cut p{font-family:var(--font-display);font-size:clamp(84px,17vw,240px);line-height:.9}
 
 /* Menu */
 .menu{background:var(--dune)}
@@ -138,7 +145,8 @@ html.motion .inside:not(.in) .inside__arrows path{stroke-dashoffset:1;opacity:0}
   .hero__ribbon{bottom:2vh}
   .dish{grid-template-columns:minmax(0,1fr);gap:var(--space-4);align-content:center;padding-top:88px}
   .dish .photo{height:40vh}
-  .inside.scene{display:flex;flex-direction:column;height:auto;min-height:0;padding-top:84px}
+  .inside.scene{display:flex;flex-direction:column;justify-content:center;height:auto;min-height:0;padding-top:84px}
+  html.stage-on .inside.scene{display:flex}
   .inside.scene h2{position:static;order:-1;padding:0 16px 14px}
   .inside__bg{position:relative;inset:auto;height:auto;aspect-ratio:1600/1309}
   .facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:30px 12px 24px}

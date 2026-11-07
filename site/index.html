@@ -23,6 +23,8 @@
 
 <main id="top">
 
+<div class="stage" id="stage">
+
 <section class="hero" id="hero" aria-labelledby="hero-title">
   <div class="sea"></div>
   <div class="hero__type">
@@ -45,8 +47,9 @@
 <section class="mood" id="mood" aria-label="That drip">
   <img src="assets/photo-drip-stack.webp" alt="Stack of waffles half dipped in dark and white chocolate on a stoneware plate" loading="lazy">
   <div class="gutter"><h2 class="lean">that drip.</h2></div>
-  <div class="mood__cut" id="cut" aria-hidden="true"><p>pick one.</p></div>
 </section>
+
+<div class="edge" id="edgeCut" aria-hidden="true"></div>
 
 <section class="menu" id="menu" aria-label="Menu">
   <div class="menu__scroll" id="menuScroll">
@@ -71,7 +74,7 @@
   </div>
 </section>
 
-<div class="wipe wipe--cells" style="--from:var(--umber-deep);--to:var(--dune)" aria-hidden="true"></div>
+<div class="edge" id="edgeWedge" aria-hidden="true"></div>
 
 <section class="scene inside" id="inside" aria-labelledby="inside-title">
   <img class="inside__bg" id="insideImg" src="assets/photo-crunch-dark.webp" width="1600" height="1309" alt="Close view of two waffles coated in chocolate and crisp pearls" loading="lazy">
@@ -84,7 +87,7 @@
   </ul>
 </section>
 
-<div class="wipe wipe--wedges" style="--from:var(--dune);--to:var(--santafe)" aria-hidden="true"></div>
+</div>
 
 <section class="scene share gutter" aria-labelledby="share-title">
   <div class="wrap share__grid">
@@ -99,8 +102,6 @@
   </div>
 </section>
 
-<div class="wipe wipe--cells" style="--from:var(--santafe);--to:var(--umber)" aria-hidden="true"></div>
-
 <section class="scene offers gutter" id="offers" aria-labelledby="offers-title">
   <div class="wrap offers__grid">
     <div>
@@ -112,8 +113,6 @@
   </div>
   <div class="wrap offers__list" id="offerList"></div>
 </section>
-
-<div class="wipe wipe--wedges" style="--from:var(--umber);--to:var(--lily)" aria-hidden="true"></div>
 
 <section class="scene visit gutter" id="visit" aria-labelledby="visit-title">
   <div class="wrap visit__grid">

@@ -51,7 +51,9 @@
 
   if (!window.gsap || !window.ScrollTrigger || TWP.calm) return;
   gsap.registerPlugin(ScrollTrigger);
-  document.documentElement.classList.add('motion');
+  ScrollTrigger.config({ ignoreMobileResize: true });
+  var root = document.documentElement;
+  root.classList.add('motion', 'stage-on');
   if (!location.hash) history.scrollRestoration = 'manual';
 
   // Smooth scroll, driven by the same clock as the animations.
@@ -60,13 +62,16 @@
     lenis.on('scroll', ScrollTrigger.update);
     gsap.ticker.add(function (t) { lenis.raf(t * 1000); });
     gsap.ticker.lagSmoothing(0);
-    $$('a[href^="#"]').forEach(function (a) {
-      a.addEventListener('click', function (ev) {
-        var to = $(a.getAttribute('href'));
-        if (to) { ev.preventDefault(); lenis.scrollTo(to, { duration: 1.6 }); }
-      });
-    });
   }
+  var menuAt = 0;
+  $$('a[href^="#"]').forEach(function (a) {
+    a.addEventListener('click', function (ev) {
+      var href = a.getAttribute('href'), to = href === '#menu' ? menuAt : href === '#top' ? 0 : $(href);
+      if (to == null) return;
+      ev.preventDefault();
+      if (lenis) lenis.scrollTo(to, { duration: 1.6 }); else scrollTo(0, typeof to === 'number' ? to : to.getBoundingClientRect().top + scrollY);
+    });
+  });
 
   // Splits text into words and letters for staggered reveals.
   function split(el, byWord) {
@@ -84,16 +89,13 @@
     });
     return bits;
   }
-  var wobble = gsap.utils.random(-16, 16, true);
+  var wobble = gsap.utils.random(-14, 14, true);
+  var RISE = { yPercent: 110, rotation: wobble, scale: .6, opacity: 0 };
   function letters(bits, trigger) {
-    return gsap.from(bits, { yPercent: 120, rotation: wobble, scale: .55, opacity: 0, duration: .7, ease: 'back.out(2.2)', stagger: .022, scrollTrigger: trigger });
+    return gsap.from(bits, Object.assign({}, RISE, { duration: .7, ease: 'back.out(2.2)', stagger: .022, scrollTrigger: trigger }));
   }
   function words(bits, trigger) {
     return gsap.from(bits, { y: 18, opacity: 0, duration: .45, ease: 'power2.out', stagger: .03, scrollTrigger: trigger });
-  }
-  // Photos open up through a round cut in the page.
-  function open(el, trigger) {
-    return gsap.fromTo(el, { clipPath: 'circle(0% at 50% 50%)' }, { clipPath: 'circle(78% at 50% 50%)', duration: 1, ease: 'power3.inOut', scrollTrigger: trigger, clearProps: 'clipPath' });
   }
 
   // Ribbon: drifts on its own and speeds up with scrolling.
@@ -104,11 +106,11 @@
     tp.setAttribute('startOffset', off % 520);
   });
 
-  // Headlines lean with scroll speed.
+  // Headlines lean with scroll speed, and the header steps aside going down.
   var lean = { v: 0 }, setLean = gsap.quickSetter('.lean', 'skewY', 'deg');
   ScrollTrigger.create({
     onUpdate: function (self) {
-      var v = gsap.utils.clamp(-5, 5, self.getVelocity() / -320);
+      var v = gsap.utils.clamp(-4, 4, self.getVelocity() / -380);
       if (Math.abs(v) > Math.abs(lean.v)) { lean.v = v; gsap.to(lean, { v: 0, duration: .7, ease: 'power3.out', overwrite: true, onUpdate: function () { setLean(lean.v); } }); }
       gsap.to('.bar', { yPercent: self.direction > 0 && self.scroll() > 240 ? -170 : 0, duration: .3, ease: 'power2.out', overwrite: 'auto' });
     }
@@ -125,92 +127,130 @@
   intro.from('#badge', { scale: 1.9, rotation: -30, opacity: 0, duration: .28, ease: 'power4.in' }, 1.1);
   intro.from('.hero__ribbon', { yPercent: 70, opacity: 0, duration: .5, ease: 'power3.out' }, 1);
 
-  // Hero pins: letters lift away, then chocolate pours into the next scene.
-  var st = { p: 0 };
-  function draw() { dripPath.setAttribute('d', st.p > .01 ? TWP.dripPath(1200, 900, { p: st.p, n: 11, seed: 11, base: .84 }) : ''); }
-  draw();
-  gsap.timeline({ scrollTrigger: { trigger: hero, pin: true, start: 'top top', end: '+=130%', scrub: .5 } })
-    .to('#waffle', { rotation: 2, scale: 1.08, duration: 1, ease: 'none' }, 0)
-    .to(heroCh, { y: function () { return gsap.utils.random(-120, -30); }, rotation: wobble, duration: .5, ease: 'none', stagger: .004 }, .1)
-    .to(st, { p: 1, duration: .62, ease: 'none', onUpdate: draw }, .38);
+  // The page holds still until the menu data is in, so the stage measures correctly.
+  if (lenis) lenis.stop();
+  root.style.overflow = 'hidden';
 
-  // Mood: the next scene cuts through in a scalloped badge shape.
-  var moodBits = split($('.mood h2'));
-  letters(moodBits, { trigger: '.mood', start: 'top 55%' });
-  var cut = $('#cut'), cutWord = $('#cut p'), cutState = { p: 0 };
-  function scallop() {
-    var w = cut.offsetWidth, h = cut.offsetHeight, r = cutState.p * Math.hypot(w, h) * .62, pts = [];
-    for (var i = 0; i < 144; i++) {
-      var t = i / 144 * Math.PI * 2, rr = r * (1 + .075 * Math.cos(12 * t + cutState.p * 4));
-      pts.push((w / 2 + rr * Math.cos(t)).toFixed(1) + 'px ' + (h / 2 + rr * Math.sin(t)).toFixed(1) + 'px');
-    }
-    cut.style.clipPath = 'polygon(' + pts.join(',') + ')';
-  }
-  scallop();
-  gsap.fromTo('.mood img', { yPercent: -5 }, { yPercent: 5, ease: 'none', scrollTrigger: { trigger: '.mood', start: 'top bottom', end: 'bottom top', scrub: true } });
-  gsap.timeline({ scrollTrigger: { trigger: '#mood', pin: true, start: 'top top', end: '+=120%', scrub: .4 } })
-    .to({}, { duration: .3 })
-    .to(cutState, { p: 1, duration: .7, ease: 'power1.in', onUpdate: scallop }, .3)
-    .fromTo(cutWord, { scale: .4, rotation: -10 }, { scale: 1, rotation: 0, duration: .5, ease: 'none' }, .5);
-
-  // The menu, offers and hours may come from the database, so the rest waits for them.
   (window.twpLive || Promise.resolve()).then(function () {
-    // Menu: pinned sideways slide on large screens, swipe on phones.
+    var stage = $('#stage'), mood = $('#mood'), menu = $('#menu'), inside = $('#inside');
+    var edgeCut = $('#edgeCut'), edgeWedge = $('#edgeWedge'), track = $('#track');
+    var hide = 'polygon(0 0,0 0,0 0)';
+    var moodBits = split($('.mood h2'));
     var dishes = $$('.dish').map(function (d) {
-      return { el: d, h: split(d.querySelector('h3')), p: split(d.querySelector('p'), true), img: d.querySelector('.photo') };
+      return { el: d, h: split(d.querySelector('h3')), p: split(d.querySelector('p'), true), img: d.querySelector('.photo'), box: d.querySelector('div') };
     });
-    gsap.matchMedia().add('(min-width:900px)', function () {
-      var scroller = $('#menuScroll'), track = $('#track');
-      scroller.style.overflow = 'hidden';
-      var slide = gsap.to(track, { x: function () { return -(track.scrollWidth - innerWidth); }, ease: 'none', scrollTrigger: { trigger: scroller, pin: true, start: 'top top', end: function () { return '+=' + (track.scrollWidth - innerWidth); }, scrub: .6, invalidateOnRefresh: true } });
-      dishes.forEach(function (d, i) {
-        var tr = i ? { trigger: d.el, containerAnimation: slide, start: 'left 65%' } : { trigger: scroller, start: 'top 45%' };
-        letters(d.h, tr); words(d.p, tr); open(d.img, tr);
-      });
-      return function () { scroller.style.overflow = ''; };
-    });
-    gsap.matchMedia().add('(max-width:899px)', function () {
-      dishes.forEach(function (d) { var tr = { trigger: d.el, start: 'top 70%' }; letters(d.h, tr); words(d.p, tr); });
-    });
+    var insideBits = split($('.inside h2'));
 
-    // Section changes: waffle cells or four wedges close over the page.
-    var W = Math.max(innerWidth, screen.width), H = Math.max(innerHeight, screen.height) * .8;
-    $$('.wipe--cells').forEach(function (el) {
-      var size = W < 900 ? 84 : 124, rows = Math.ceil(H / size) + 2, cols = Math.ceil(W / size) + 2, cells = [];
-      for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++) {
-        var i = document.createElement('i');
-        i.style.cssText = 'left:' + (c - .5) * size + 'px;top:' + (r - .5) * size + 'px;width:' + size + 'px;height:' + size + 'px';
-        el.appendChild(i); cells.push(i);
+    gsap.set([mood, menu, inside, edgeCut, edgeWedge], { clipPath: hide });
+
+    // Reveal 1: the next scene pours in through chocolate drips.
+    var drip = { p: 0 };
+    function pour() {
+      var w = stage.offsetWidth, h = stage.offsetHeight * 1.25, svg = dripPath.parentNode, opt = function (p) { return { p: p, n: 11, seed: 11, base: .84 }; };
+      svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
+      dripPath.setAttribute('d', drip.p > .005 ? TWP.dripPath(w, h, opt(Math.min(1, drip.p + .05))) : '');
+      mood.style.clipPath = drip.p > .005 ? (drip.p >= 1 ? 'none' : 'path("' + TWP.dripPath(w, h, opt(drip.p)) + '")') : hide;
+    }
+
+    // Reveal 2: a badge-shaped cut opens with a sticker edge.
+    var cut = { p: 0 };
+    function scallop(extra) {
+      var w = stage.offsetWidth, h = stage.offsetHeight, r = cut.p * Math.hypot(w, h) * .62 + extra, pts = [];
+      for (var i = 0; i < 144; i++) {
+        var t = i / 144 * Math.PI * 2, rr = r * (1 + .075 * Math.cos(12 * t + cut.p * 4));
+        pts.push((w / 2 + rr * Math.cos(t)).toFixed(1) + 'px ' + (h / 2 + rr * Math.sin(t)).toFixed(1) + 'px');
       }
-      gsap.set(cells, { rotation: 45, scale: 0 });
-      gsap.to(cells, { scale: 1.56, ease: 'none', stagger: { amount: .75, grid: [rows, cols], from: 'start', axis: 'y' }, scrollTrigger: { trigger: el, start: 'top 90%', end: 'bottom 35%', scrub: .35 } });
-    });
-    $$('.wipe--wedges').forEach(function (el) {
-      var R = Math.hypot(W, H) * .54, q = [[0, 0], [1, 0], [1, 1], [0, 1]].map(function (p) {
-        var i = document.createElement('i');
-        i.style.cssText = 'width:' + R * 2 + 'px;height:' + R * 2 + 'px;margin:' + -R + 'px;left:' + p[0] * 100 + '%;top:' + p[1] * 100 + '%';
-        el.appendChild(i); return i;
+      return 'polygon(' + pts.join(',') + ')';
+    }
+    function openCut() {
+      var on = cut.p > .002, full = cut.p >= 1;
+      menu.style.clipPath = !on ? hide : full ? 'none' : scallop(0);
+      edgeCut.style.clipPath = !on || full ? hide : scallop(16);
+    }
+
+    // Reveal 3: four wedges grow in from the corners, like the logo.
+    var wedge = { p: 0 };
+    function circles(extra) {
+      var w = stage.offsetWidth, h = stage.offsetHeight, R = Math.hypot(w, h) * .56, d = '';
+      [[0, 0, 0], [w, 0, .12], [w, h, .24], [0, h, .36]].forEach(function (c) {
+        var q = Math.max(0, Math.min(1, (wedge.p - c[2]) / .64)), r = q * R + (q > 0 ? extra : 0);
+        d += 'M' + (c[0] - r).toFixed(1) + ' ' + c[1] + 'a' + r.toFixed(1) + ' ' + r.toFixed(1) + ' 0 1 0 ' + (r * 2).toFixed(1) + ' 0a' + r.toFixed(1) + ' ' + r.toFixed(1) + ' 0 1 0 ' + (-r * 2).toFixed(1) + ' 0Z';
       });
-      gsap.set(q, { scale: 0 });
-      gsap.to(q, { scale: 1, ease: 'power1.inOut', stagger: .12, scrollTrigger: { trigger: el, start: 'top 90%', end: 'bottom 35%', scrub: .35 } });
+      return 'path("' + d + '")';
+    }
+    function openWedge() {
+      var on = wedge.p > .002, full = wedge.p >= 1;
+      inside.style.clipPath = !on ? hide : full ? 'none' : circles(0);
+      edgeWedge.style.clipPath = !on || full ? hide : circles(14);
+      if (wedge.p > .8) inside.classList.add('in');
+    }
+
+    // One scene stays on screen through every change, so nothing is ever blank.
+    var t = 0, tl = gsap.timeline({ defaults: { ease: 'none' } });
+    tl.to(heroCh, { y: function () { return gsap.utils.random(-110, -30); }, rotation: wobble, duration: .7, stagger: .004 }, .2);
+    tl.to('#waffle', { rotation: 2, scale: 1.1, duration: 1.3 }, .2);
+    tl.to(drip, { p: 1, duration: 1.1, ease: 'power1.inOut', onUpdate: pour }, .4);
+    tl.fromTo('.mood img', { scale: 1.14 }, { scale: 1, duration: 1.8 }, .4);
+    tl.from(moodBits, Object.assign({}, RISE, { duration: .4, stagger: .02, ease: 'back.out(2)' }), 1);
+
+    t = 2.1;
+    tl.to(cut, { p: 1, duration: 1, ease: 'power2.in', onUpdate: openCut }, t);
+    tl.addLabel('menu', t + .9);
+    t += .55;
+    dishes.forEach(function (d, i) {
+      if (i) {
+        tl.to(track, { x: function () { return -i * dishes[0].el.offsetWidth; }, duration: 1, ease: 'power2.inOut' }, t);
+        t += .4;
+      }
+      tl.from(d.h, Object.assign({}, RISE, { duration: .35, stagger: .012, ease: 'back.out(2)' }), t);
+      tl.from(d.p, { y: 18, opacity: 0, duration: .3, stagger: .012 }, t + .15);
+      tl.fromTo(d.img, { scale: .8, opacity: 0 }, { scale: 1, opacity: 1, duration: .45, ease: 'back.out(1.5)' }, t);
+      t += 1;
     });
 
-    $$('.scene h2').forEach(function (h) { letters(split(h), { trigger: h, start: 'top 85%' }); });
-    $$('.lede,.share__panel p:last-child').forEach(function (p) { words(split(p, true), { trigger: p, start: 'top 88%' }); });
-    ScrollTrigger.create({ trigger: '.inside', start: 'top 45%', once: true, onEnter: function () { $('.inside').classList.add('in'); } });
-    gsap.from('.inside__bg', { scale: 1.14, ease: 'none', scrollTrigger: { trigger: '.inside', start: 'top bottom', end: 'top top', scrub: true } });
-    open('.share__pics .a', { trigger: '.share__pics', start: 'top 80%' });
-    gsap.from('.facts li', { scale: .7, opacity: 0, duration: .4, stagger: .22, ease: 'back.out(2)', scrollTrigger: { trigger: '.inside', start: 'top 45%' } });
-    gsap.from('.share__pics .b', { y: 70, rotation: -14, duration: .6, ease: 'back.out(1.6)', scrollTrigger: { trigger: '.share__pics', start: 'top 70%' } });
-    gsap.from('.offers__badge', { scale: 1.8, rotation: -24, opacity: 0, duration: .28, ease: 'power4.in', scrollTrigger: { trigger: '.offers__badge', start: 'top 90%' } });
-    gsap.from('.visit dt,.visit dd', { x: -24, opacity: 0, duration: .35, stagger: .04, ease: 'power2.out', scrollTrigger: { trigger: '.visit dl', start: 'top 85%' } });
-    gsap.fromTo('#fly', { x: -160, y: 50 }, { x: 40, y: -20, ease: 'none', scrollTrigger: { trigger: '.visit', start: 'top bottom', end: 'bottom 60%', scrub: true } });
+    tl.fromTo('.inside__bg', { scale: 1.16 }, { scale: 1, duration: 1.7 }, t);
+    tl.to(wedge, { p: 1, duration: 1.1, ease: 'power1.inOut', onUpdate: openWedge }, t);
+    tl.from(insideBits, Object.assign({}, RISE, { duration: .4, stagger: .014, ease: 'back.out(2)' }), t + .75);
+    tl.from('.facts li', { scale: .7, opacity: 0, duration: .25, stagger: .12, ease: 'back.out(2)' }, t + .85);
+    t += 3;
+    tl.to({}, { duration: .01 }, t);
 
+    var UNIT = .72;
+    var master = ScrollTrigger.create({
+      animation: tl, trigger: stage, pin: true, start: 'top top', anticipatePin: 1, scrub: .45, invalidateOnRefresh: true,
+      end: function () { return '+=' + t * UNIT * innerHeight; }
+    });
+
+    // Lower sections slide up over the one before, which holds and dims.
+    var order = ['.share', '.offers', '.visit', '.twp-foot'].map($);
+    var R = Math.min(innerWidth * .1, 120);
+    order.forEach(function (next, i) {
+      gsap.fromTo(next, { borderTopLeftRadius: R, borderTopRightRadius: R }, { borderTopLeftRadius: 0, borderTopRightRadius: 0, ease: 'none', scrollTrigger: { trigger: next, start: 'top bottom', end: 'top top', scrub: true } });
+      if (!i) return;
+      var prev = order[i - 1];
+      ScrollTrigger.create({ trigger: prev, pin: true, pinSpacing: false, start: 'bottom bottom', end: function () { return '+=' + Math.min(next.offsetHeight, innerHeight); } });
+      gsap.to(prev, { '--dim': .6, ease: 'none', scrollTrigger: { trigger: next, start: 'top bottom', end: 'top top', scrub: true } });
+    });
+
+    $$('.share h2,.offers h2,.visit h2').forEach(function (h) { letters(split(h), { trigger: h, start: 'top 80%' }); });
+    $$('.lede,.share__panel p:last-child').forEach(function (p) { words(split(p, true), { trigger: p, start: 'top 85%' }); });
+    gsap.from('.share__pics .a', { scale: .8, rotation: 9, opacity: 0, duration: .7, ease: 'back.out(1.5)', scrollTrigger: { trigger: '.share__pics', start: 'top 75%' } });
+    gsap.from('.share__pics .b', { y: 70, rotation: -14, opacity: 0, duration: .6, delay: .15, ease: 'back.out(1.6)', scrollTrigger: { trigger: '.share__pics', start: 'top 75%' } });
+    gsap.from('.offers__badge', { scale: 1.8, rotation: -24, opacity: 0, duration: .28, ease: 'power4.in', scrollTrigger: { trigger: '.offers__badge', start: 'top 85%' } });
+    gsap.from('.visit dt,.visit dd', { x: -24, opacity: 0, duration: .35, stagger: .04, ease: 'power2.out', scrollTrigger: { trigger: '.visit dl', start: 'top 85%' } });
+    gsap.fromTo('#fly', { x: -160, y: 50 }, { x: 40, y: -20, ease: 'none', scrollTrigger: { trigger: '.visit', start: 'top bottom', end: 'top 20%', scrub: true } });
     gsap.from('.twp-foot__grid > *', { y: 30, opacity: 0, duration: .5, stagger: .08, ease: 'power2.out', scrollTrigger: { trigger: '.twp-foot__panel', start: 'top 75%' } });
     gsap.from('#sign span', { yPercent: 96, rotation: function (i) { return i % 2 ? 7 : -7; }, duration: .8, ease: 'back.out(1.9)', stagger: .05, scrollTrigger: { trigger: '.twp-foot__panel', start: 'top 55%' } });
-    ScrollTrigger.refresh();
-  });
 
-  // Images arrive late, so recheck pin distances once everything has loaded.
-  addEventListener('load', function () { ScrollTrigger.refresh(); });
+    drawArrows();
+    function refresh() {
+      ScrollTrigger.refresh();
+      menuAt = master.start + (tl.labels.menu / tl.duration()) * (master.end - master.start);
+    }
+    addEventListener('load', refresh);
+    ScrollTrigger.addEventListener('refresh', function () { pour(); openCut(); openWedge(); });
+    root.style.overflow = '';
+    if (lenis) lenis.start();
+    refresh();
+  });
 })();
