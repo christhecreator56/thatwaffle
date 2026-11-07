@@ -1,0 +1,44 @@
+/* Admin layout. Components come from twp.css. */
+body{background:var(--justright);min-height:100vh}
+[hidden]{display:none!important}
+h1{margin:0;font-family:var(--font-display);font-weight:400;font-size:clamp(56px,9vw,84px);line-height:.92;color:var(--umber)}
+h2{margin:0;font-family:var(--font-poster);font-weight:400;font-size:30px;letter-spacing:.03em;text-transform:uppercase}
+textarea,select{flex:1;min-width:0;border:0;outline:0;background:transparent;color:var(--ink);font:inherit;min-height:48px;padding:12px var(--space-3)}
+input[type=file]{font:inherit;font-size:15px;max-width:100%}
+.twp-form{background:var(--kinari)}
+.twp-input{background:var(--justright)}
+
+.login{max-width:420px;margin:0 auto;min-height:100vh;display:grid;align-content:center;justify-items:center;gap:var(--space-3);padding:var(--space-4) max(16px,env(safe-area-inset-left,0px))}
+.login .twp-form{width:100%}
+.login p{text-align:center}
+
+.top{position:sticky;top:0;z-index:10;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-2);padding:var(--space-2) max(16px,env(safe-area-inset-left,0px));background:var(--dune);color:var(--justright)}
+.top nav{display:flex;gap:4px}
+.top a,.top button{appearance:none;border:0;background:transparent;color:inherit;font-family:var(--font-poster);font-size:21px;letter-spacing:.05em;text-transform:uppercase;text-decoration:none;cursor:pointer;min-height:44px;padding:0 var(--space-3);border-radius:var(--radius-pill);display:inline-flex;align-items:center}
+.top .tab[aria-pressed=true]{background:var(--yamabuki);color:var(--dune)}
+.top :focus-visible{outline-color:var(--yamabuki)}
+
+.page{max-width:820px;margin:0 auto;padding:var(--space-5) max(16px,env(safe-area-inset-left,0px)) var(--space-6)}
+.page section{display:grid;gap:var(--space-4)}
+.head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-3)}
+.split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3)}
+.row{display:flex;flex-wrap:wrap;gap:var(--space-3)}
+.twp-btn{min-height:48px}
+
+.list{list-style:none;margin:0;padding:0;display:grid;gap:var(--space-3)}
+.list li{display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:var(--space-3);align-items:center;padding:var(--space-3);background:var(--kinari);border:2px solid var(--dune);border-radius:var(--radius-md);box-shadow:var(--sticker-sm)}
+.list img,.list .noimg{width:72px;height:72px;object-fit:cover;border-radius:var(--radius-sm);background:var(--lily)}
+.list b{display:block;font-family:var(--font-poster);font-weight:400;font-size:24px;letter-spacing:.03em;text-transform:uppercase;overflow-wrap:anywhere}
+.list small{display:block;font-size:14px;line-height:21px;color:var(--ink-soft);overflow-wrap:anywhere}
+.acts{display:flex;gap:var(--space-2)}
+.acts button{appearance:none;border:2px solid var(--dune);background:transparent;color:var(--dune);border-radius:var(--radius-pill);min-height:44px;padding:0 var(--space-3);font-weight:700;cursor:pointer}
+.empty{padding:var(--space-4);text-align:center;color:var(--ink-soft)}
+.pill{display:inline-block;margin-right:6px;padding:0 10px;border-radius:var(--radius-pill);background:var(--lily);color:var(--dune);font-size:13px;font-weight:700}
+.pill--on{background:var(--seiji)}
+.toast{position:fixed;z-index:20;left:50%;bottom:var(--space-4);transform:translateX(-50%);margin:0;padding:var(--space-2) var(--space-4);background:var(--dune);color:var(--justright);border-radius:var(--radius-pill);font-weight:700}
+
+@media (max-width:560px){
+  .list li{grid-template-columns:56px minmax(0,1fr)}
+  .list img,.list .noimg{width:56px;height:56px}
+  .acts{grid-column:1/-1}
+}

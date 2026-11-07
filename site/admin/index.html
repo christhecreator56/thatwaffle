@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Admin | That Waffle Place</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../twp.css">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<main class="login" id="loginView" hidden>
+  <img src="../assets/badge-waffle.svg" alt="That Waffle Place" width="120" height="120">
+  <h1>admin</h1>
+  <form class="twp-form" id="loginForm">
+    <div class="twp-field"><label for="email">Email</label><div class="twp-input"><input id="email" type="email" autocomplete="username" required></div></div>
+    <div class="twp-field"><label for="password">Password</label><div class="twp-input"><input id="password" type="password" autocomplete="current-password" required></div></div>
+    <p class="twp-err" id="loginMsg" role="alert"></p>
+    <button class="twp-btn" type="submit">Log in</button>
+  </form>
+</main>
+
+<main class="login" id="setupView" hidden>
+  <h1>almost there</h1>
+  <p>The admin page isn't connected to Supabase yet. Add the Project URL and anon key to <code>site/config.js</code>.</p>
+</main>
+
+<div id="appView" hidden>
+  <header class="top">
+    <a href="../" class="top__site">View site</a>
+    <nav aria-label="Admin sections">
+      <button type="button" class="tab" data-tab="offers" aria-pressed="true">Offers</button>
+      <button type="button" class="tab" data-tab="menu" aria-pressed="false">Menu</button>
+      <button type="button" class="tab" data-tab="hours" aria-pressed="false">Hours</button>
+    </nav>
+    <button type="button" class="top__out" id="logout">Log out</button>
+  </header>
+
+  <p class="toast" id="toast" role="status" hidden></p>
+
+  <main class="page">
+    <section id="tab-offers">
+      <div class="head"><h1>offers</h1><button type="button" class="twp-btn" id="newOffer">Add offer</button></div>
+      <form class="twp-form editor" id="offerForm" hidden>
+        <h2 id="offerTitle">Add offer</h2>
+        <div class="twp-field"><label for="o-name">Offer name</label><div class="twp-input"><input id="o-name" required maxlength="80"></div></div>
+        <div class="twp-field"><label for="o-discount">Discount</label><div class="twp-input"><input id="o-discount" required maxlength="120" placeholder="Second wedge at half price"></div></div>
+        <div class="split">
+          <div class="twp-field"><label for="o-start">Starts</label><div class="twp-input"><input id="o-start" type="date" required></div></div>
+          <div class="twp-field"><label for="o-end">Ends</label><div class="twp-input"><input id="o-end" type="date" required></div></div>
+        </div>
+        <div class="twp-field"><label for="o-terms">Terms</label><div class="twp-input"><textarea id="o-terms" required rows="3" maxlength="500"></textarea></div></div>
+        <div class="twp-field"><label for="o-poster">Poster (JPG, PNG or WebP, under 5 MB)</label><input id="o-poster" type="file" accept="image/jpeg,image/png,image/webp"></div>
+        <label class="twp-check" for="o-visible"><input id="o-visible" type="checkbox" checked><span>Show on the website</span></label>
+        <p class="twp-err" id="offerMsg" role="alert"></p>
+        <div class="row"><button class="twp-btn" type="submit">Save offer</button><button class="twp-btn twp-btn--ghost" type="button" data-cancel="offerForm">Cancel</button></div>
+      </form>
+      <ul class="list" id="offerList"></ul>
+    </section>
+
+    <section id="tab-menu" hidden>
+      <div class="head"><h1>menu</h1><button type="button" class="twp-btn" id="newItem">Add item</button></div>
+      <form class="twp-form editor" id="itemForm" hidden>
+        <h2 id="itemTitle">Add item</h2>
+        <div class="twp-field"><label for="m-name">Name</label><div class="twp-input"><input id="m-name" required maxlength="60"></div></div>
+        <div class="twp-field"><label for="m-desc">Description</label><div class="twp-input"><textarea id="m-desc" rows="2" maxlength="160"></textarea></div></div>
+        <div class="split">
+          <div class="twp-field"><label for="m-price">Price in rupees</label><div class="twp-input"><span>₹</span><input id="m-price" type="number" min="0" step="1" inputmode="numeric"></div></div>
+          <div class="twp-field"><label for="m-pos">Order on the menu</label><div class="twp-input"><input id="m-pos" type="number" step="1" inputmode="numeric" required></div></div>
+        </div>
+        <div class="twp-field"><label for="m-scene">Background colour</label><div class="twp-input"><select id="m-scene"><option value="umber">Burnt umber</option><option value="dune">Dune</option><option value="lily">Lily</option><option value="umber-deep">Deep umber</option></select></div></div>
+        <div class="twp-field"><label for="m-photo">Photo (JPG, PNG or WebP, under 5 MB)</label><input id="m-photo" type="file" accept="image/jpeg,image/png,image/webp"></div>
+        <label class="twp-check" for="m-visible"><input id="m-visible" type="checkbox" checked><span>Show on the website</span></label>
+        <p class="twp-err" id="itemMsg" role="alert"></p>
+        <div class="row"><button class="twp-btn" type="submit">Save item</button><button class="twp-btn twp-btn--ghost" type="button" data-cancel="itemForm">Cancel</button></div>
+      </form>
+      <ul class="list" id="itemList"></ul>
+    </section>
+
+    <section id="tab-hours" hidden>
+      <div class="head"><h1>hours</h1></div>
+      <form class="twp-form editor" id="hoursForm">
+        <div class="twp-field"><label for="h-text">Opening hours</label><div class="twp-input"><input id="h-text" maxlength="120" placeholder="Every day, 11 am to 11 pm"></div></div>
+        <p class="twp-err" id="hoursMsg" role="alert"></p>
+        <div class="row"><button class="twp-btn" type="submit">Save hours</button></div>
+      </form>
+    </section>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="../config.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

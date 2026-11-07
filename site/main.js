@@ -118,58 +118,62 @@
     .to(cutState, { p: 1, duration: .7, ease: 'power1.in', onUpdate: scallop }, .3)
     .fromTo(cutWord, { scale: .4, rotation: -10 }, { scale: 1, rotation: 0, duration: .5, ease: 'none' }, .5);
 
-  // Menu: pinned sideways slide on large screens, swipe on phones.
-  var dishes = $$('.dish').map(function (d) {
-    return { el: d, h: split(d.querySelector('h3')), p: split(d.querySelector('p'), true), img: d.querySelector('.photo') };
-  });
-  gsap.matchMedia().add('(min-width:900px)', function () {
-    var scroller = $('#menuScroll'), track = $('#track');
-    scroller.style.overflow = 'hidden';
-    var slide = gsap.to(track, { x: function () { return -(track.scrollWidth - innerWidth); }, ease: 'none', scrollTrigger: { trigger: scroller, pin: true, start: 'top top', end: function () { return '+=' + (track.scrollWidth - innerWidth); }, scrub: .6, invalidateOnRefresh: true } });
-    dishes.forEach(function (d, i) {
-      var tr = i ? { trigger: d.el, containerAnimation: slide, start: 'left 65%' } : { trigger: scroller, start: 'top 45%' };
-      letters(d.h, tr); words(d.p, tr); open(d.img, tr);
+  // The menu, offers and hours may come from the database, so the rest waits for them.
+  (window.twpLive || Promise.resolve()).then(function () {
+    // Menu: pinned sideways slide on large screens, swipe on phones.
+    var dishes = $$('.dish').map(function (d) {
+      return { el: d, h: split(d.querySelector('h3')), p: split(d.querySelector('p'), true), img: d.querySelector('.photo') };
     });
-    return function () { scroller.style.overflow = ''; };
-  });
-  gsap.matchMedia().add('(max-width:899px)', function () {
-    dishes.forEach(function (d) { var tr = { trigger: d.el, start: 'top 70%' }; letters(d.h, tr); words(d.p, tr); });
-  });
-
-  // Section changes: waffle cells or four wedges close over the page.
-  var W = Math.max(innerWidth, screen.width), H = Math.max(innerHeight, screen.height) * .8;
-  $$('.wipe--cells').forEach(function (el) {
-    var size = W < 900 ? 84 : 124, rows = Math.ceil(H / size) + 2, cols = Math.ceil(W / size) + 2, cells = [];
-    for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++) {
-      var i = document.createElement('i');
-      i.style.cssText = 'left:' + (c - .5) * size + 'px;top:' + (r - .5) * size + 'px;width:' + size + 'px;height:' + size + 'px';
-      el.appendChild(i); cells.push(i);
-    }
-    gsap.set(cells, { rotation: 45, scale: 0 });
-    gsap.to(cells, { scale: 1.56, ease: 'none', stagger: { amount: .75, grid: [rows, cols], from: 'start', axis: 'y' }, scrollTrigger: { trigger: el, start: 'top 90%', end: 'bottom 35%', scrub: .35 } });
-  });
-  $$('.wipe--wedges').forEach(function (el) {
-    var R = Math.hypot(W, H) * .54, q = [[0, 0], [1, 0], [1, 1], [0, 1]].map(function (p) {
-      var i = document.createElement('i');
-      i.style.cssText = 'width:' + R * 2 + 'px;height:' + R * 2 + 'px;margin:' + -R + 'px;left:' + p[0] * 100 + '%;top:' + p[1] * 100 + '%';
-      el.appendChild(i); return i;
+    gsap.matchMedia().add('(min-width:900px)', function () {
+      var scroller = $('#menuScroll'), track = $('#track');
+      scroller.style.overflow = 'hidden';
+      var slide = gsap.to(track, { x: function () { return -(track.scrollWidth - innerWidth); }, ease: 'none', scrollTrigger: { trigger: scroller, pin: true, start: 'top top', end: function () { return '+=' + (track.scrollWidth - innerWidth); }, scrub: .6, invalidateOnRefresh: true } });
+      dishes.forEach(function (d, i) {
+        var tr = i ? { trigger: d.el, containerAnimation: slide, start: 'left 65%' } : { trigger: scroller, start: 'top 45%' };
+        letters(d.h, tr); words(d.p, tr); open(d.img, tr);
+      });
+      return function () { scroller.style.overflow = ''; };
     });
-    gsap.set(q, { scale: 0 });
-    gsap.to(q, { scale: 1, ease: 'power1.inOut', stagger: .12, scrollTrigger: { trigger: el, start: 'top 90%', end: 'bottom 35%', scrub: .35 } });
+    gsap.matchMedia().add('(max-width:899px)', function () {
+      dishes.forEach(function (d) { var tr = { trigger: d.el, start: 'top 70%' }; letters(d.h, tr); words(d.p, tr); });
+    });
+
+    // Section changes: waffle cells or four wedges close over the page.
+    var W = Math.max(innerWidth, screen.width), H = Math.max(innerHeight, screen.height) * .8;
+    $$('.wipe--cells').forEach(function (el) {
+      var size = W < 900 ? 84 : 124, rows = Math.ceil(H / size) + 2, cols = Math.ceil(W / size) + 2, cells = [];
+      for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++) {
+        var i = document.createElement('i');
+        i.style.cssText = 'left:' + (c - .5) * size + 'px;top:' + (r - .5) * size + 'px;width:' + size + 'px;height:' + size + 'px';
+        el.appendChild(i); cells.push(i);
+      }
+      gsap.set(cells, { rotation: 45, scale: 0 });
+      gsap.to(cells, { scale: 1.56, ease: 'none', stagger: { amount: .75, grid: [rows, cols], from: 'start', axis: 'y' }, scrollTrigger: { trigger: el, start: 'top 90%', end: 'bottom 35%', scrub: .35 } });
+    });
+    $$('.wipe--wedges').forEach(function (el) {
+      var R = Math.hypot(W, H) * .54, q = [[0, 0], [1, 0], [1, 1], [0, 1]].map(function (p) {
+        var i = document.createElement('i');
+        i.style.cssText = 'width:' + R * 2 + 'px;height:' + R * 2 + 'px;margin:' + -R + 'px;left:' + p[0] * 100 + '%;top:' + p[1] * 100 + '%';
+        el.appendChild(i); return i;
+      });
+      gsap.set(q, { scale: 0 });
+      gsap.to(q, { scale: 1, ease: 'power1.inOut', stagger: .12, scrollTrigger: { trigger: el, start: 'top 90%', end: 'bottom 35%', scrub: .35 } });
+    });
+
+    $$('.scene h2').forEach(function (h) { letters(split(h), { trigger: h, start: 'top 85%' }); });
+    $$('.lede,.share__panel p:last-child').forEach(function (p) { words(split(p, true), { trigger: p, start: 'top 88%' }); });
+    open('.inside .photo', { trigger: '.inside .photo', start: 'top 80%' });
+    open('.share__pics .a', { trigger: '.share__pics', start: 'top 80%' });
+    gsap.from('.facts li', { x: 40, opacity: 0, duration: .4, stagger: .1, ease: 'back.out(1.8)', scrollTrigger: { trigger: '.facts', start: 'top 80%' } });
+    gsap.from('.share__pics .b', { y: 70, rotation: -14, duration: .6, ease: 'back.out(1.6)', scrollTrigger: { trigger: '.share__pics', start: 'top 70%' } });
+    gsap.from('.offers__badge', { scale: 1.8, rotation: -24, opacity: 0, duration: .28, ease: 'power4.in', scrollTrigger: { trigger: '.offers__badge', start: 'top 90%' } });
+    gsap.from('.visit dt,.visit dd', { x: -24, opacity: 0, duration: .35, stagger: .04, ease: 'power2.out', scrollTrigger: { trigger: '.visit dl', start: 'top 85%' } });
+    gsap.fromTo('#fly', { x: -160, y: 50 }, { x: 40, y: -20, ease: 'none', scrollTrigger: { trigger: '.visit', start: 'top bottom', end: 'bottom 60%', scrub: true } });
+
+    gsap.from('.twp-foot__grid > *', { y: 30, opacity: 0, duration: .5, stagger: .08, ease: 'power2.out', scrollTrigger: { trigger: '.twp-foot__panel', start: 'top 75%' } });
+    gsap.from('#sign span', { yPercent: 96, rotation: function (i) { return i % 2 ? 7 : -7; }, duration: .8, ease: 'back.out(1.9)', stagger: .05, scrollTrigger: { trigger: '.twp-foot__panel', start: 'top 55%' } });
+    ScrollTrigger.refresh();
   });
-
-  $$('.scene h2').forEach(function (h) { letters(split(h), { trigger: h, start: 'top 85%' }); });
-  $$('.lede,.share__panel p:last-child').forEach(function (p) { words(split(p, true), { trigger: p, start: 'top 88%' }); });
-  open('.inside .photo', { trigger: '.inside .photo', start: 'top 80%' });
-  open('.share__pics .a', { trigger: '.share__pics', start: 'top 80%' });
-  gsap.from('.facts li', { x: 40, opacity: 0, duration: .4, stagger: .1, ease: 'back.out(1.8)', scrollTrigger: { trigger: '.facts', start: 'top 80%' } });
-  gsap.from('.share__pics .b', { y: 70, rotation: -14, duration: .6, ease: 'back.out(1.6)', scrollTrigger: { trigger: '.share__pics', start: 'top 70%' } });
-  gsap.from('.offers__badge', { scale: 1.8, rotation: -24, opacity: 0, duration: .28, ease: 'power4.in', scrollTrigger: { trigger: '.offers__badge', start: 'top 90%' } });
-  gsap.from('.visit dt,.visit dd', { x: -24, opacity: 0, duration: .35, stagger: .04, ease: 'power2.out', scrollTrigger: { trigger: '.visit dl', start: 'top 85%' } });
-  gsap.fromTo('#fly', { x: -160, y: 50 }, { x: 40, y: -20, ease: 'none', scrollTrigger: { trigger: '.visit', start: 'top bottom', end: 'bottom 60%', scrub: true } });
-
-  gsap.from('.twp-foot__grid > *', { y: 30, opacity: 0, duration: .5, stagger: .08, ease: 'power2.out', scrollTrigger: { trigger: '.twp-foot__panel', start: 'top 75%' } });
-  gsap.from('#sign span', { yPercent: 96, rotation: function (i) { return i % 2 ? 7 : -7; }, duration: .8, ease: 'back.out(1.9)', stagger: .05, scrollTrigger: { trigger: '.twp-foot__panel', start: 'top 55%' } });
 
   // Images arrive late, so recheck pin distances once everything has loaded.
   addEventListener('load', function () { ScrollTrigger.refresh(); });

@@ -97,6 +97,11 @@ html.motion .mood .mood__cut{display:grid}
 .offers__cta{margin-top:var(--space-4)}
 .offers__badge{width:min(100%,340px);margin-inline:auto}
 
+.offers__list{display:grid;gap:var(--space-5)}
+.offers__list:not(:empty){margin-top:var(--space-6)}
+.offers__list .twp-ticket__poster{background:var(--dune)}
+.offers__list .twp-ticket__poster img{max-height:220px;object-fit:contain;border-radius:var(--radius-md)}
+
 /* Visit */
 .visit{background:var(--lily);color:var(--dune);overflow:hidden}
 .visit__grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.8fr);gap:var(--space-6);align-items:center}
@@ -124,6 +129,8 @@ html.motion .mood .mood__cut{display:grid}
   .dish{grid-template-columns:minmax(0,1fr);gap:var(--space-4);align-content:center;padding-top:88px}
   .dish .photo{height:40vh}
   .inside__grid,.share__grid,.offers__grid,.visit__grid{grid-template-columns:minmax(0,1fr);gap:var(--space-5)}
+  .offers__list .twp-ticket{grid-template-columns:minmax(0,1fr);-webkit-mask:none;mask:none}
+  .offers__list .twp-ticket__poster{border-right:0;border-bottom:3px dashed var(--dune);min-height:0;border-radius:var(--radius-lg) var(--radius-lg) 0 0}
   .twp-foot__grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
   .twp-foot__grid>div{grid-column:1/-1}
 }
