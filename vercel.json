@@ -1,4 +1,7 @@
 {
   "buildCommand": "echo static site",
-  "outputDirectory": "site"
+  "outputDirectory": "site",
+  "rewrites": [
+    { "source": "/sb/:path*", "destination": "https://hdewnmlpuznncvkyxpjn.supabase.co/:path*" }
+  ]
 }

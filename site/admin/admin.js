@@ -27,10 +27,10 @@
     var m = (err && err.message) || '';
     if (/row-level security|permission denied/i.test(m)) return 'This account is not allowed to make changes.';
     if (/Invalid login/i.test(m)) return 'That email or password is wrong.';
-    if (/fetch/i.test(m)) return 'Could not reach the server. Check your connection and try again.';
+    if (/fetch|network/i.test(m)) return 'Could not reach the server. Try another network, or turn off any ad blocker for this site.';
     return m || 'Something went wrong. Try again.';
   }
-  function src(url) { return /^https?:/.test(url) ? url : '../' + url; }
+  function src(url) { return /^https?:/.test(url) ? url : '/' + url; }
   function today() {
     return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
   }

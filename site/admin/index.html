@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Admin | That Waffle Place</title>
 <meta name="robots" content="noindex,nofollow">
-<link rel="stylesheet" href="../tokens.css">
-<link rel="stylesheet" href="../twp.css">
-<link rel="stylesheet" href="admin.css">
+<link rel="stylesheet" href="/tokens.css">
+<link rel="stylesheet" href="/twp.css">
+<link rel="stylesheet" href="/admin/admin.css">
 </head>
 <body>
 
 <main class="login" id="loginView" hidden>
-  <img src="../assets/badge-waffle.svg" alt="That Waffle Place" width="120" height="120">
+  <img src="/assets/badge-waffle.svg" alt="That Waffle Place" width="120" height="120">
   <h1>admin</h1>
   <form class="twp-form" id="loginForm">
     <div class="twp-field"><label for="email">Email</label><div class="twp-input"><input id="email" type="email" autocomplete="username" required></div></div>
@@ -29,7 +29,7 @@
 
 <div id="appView" hidden>
   <header class="top">
-    <a href="../" class="top__site">View site</a>
+    <a href="/" class="top__site">View site</a>
     <nav aria-label="Admin sections">
       <button type="button" class="tab" data-tab="offers" aria-pressed="true">Offers</button>
       <button type="button" class="tab" data-tab="menu" aria-pressed="false">Menu</button>
@@ -91,7 +91,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
-<script src="../config.js"></script>
-<script src="admin.js"></script>
+<script src="/config.js"></script>
+<script src="/admin/admin.js"></script>
 </body>
 </html>
