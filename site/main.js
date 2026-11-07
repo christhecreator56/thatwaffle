@@ -134,11 +134,38 @@
   (window.twpLive || Promise.resolve()).then(function () {
     var stage = $('#stage'), mood = $('#mood'), menu = $('#menu'), inside = $('#inside');
     var edgeCut = $('#edgeCut'), edgeWedge = $('#edgeWedge'), track = $('#track');
+    var master;
     var hide = 'polygon(0 0,0 0,0 0)';
     var moodBits = split($('.mood h2'));
-    var dishes = $$('.dish').map(function (d) {
-      return { el: d, h: split(d.querySelector('h3')), p: split(d.querySelector('p'), true), img: d.querySelector('.photo'), box: d.querySelector('div') };
+    var dishes = $$('.dish');
+
+    // Menu board: one flavour leads at a time, and the rest stay in view.
+    var shown = -1, stepStart = 0, stepLength = 0;
+    function lead(i) {
+      if (i === shown) return;
+      shown = i;
+      dishes.forEach(function (d, n) {
+        d.classList.toggle('on', n === i);
+        d.querySelector('button').setAttribute('aria-current', n === i ? 'true' : 'false');
+      });
+      menu.style.setProperty('--bg', dishes[i].style.getPropertyValue('--bg'));
+      menu.style.setProperty('--fg', dishes[i].style.getPropertyValue('--fg'));
+      var d = dishes[i];
+      track.scrollTo({ top: d.offsetTop - track.clientHeight / 3, behavior: 'smooth' });
+    }
+    dishes.forEach(function (d, i) {
+      var h = d.querySelector('h3'), b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = h.textContent;
+      h.textContent = '';
+      h.appendChild(b);
+      b.addEventListener('click', function () {
+        var at = (stepStart + (i + .5) * stepLength / dishes.length) / tl.duration();
+        var y = master.start + at * (master.end - master.start);
+        if (lenis) lenis.scrollTo(y, { duration: 1 }); else scrollTo(0, y);
+      });
     });
+    lead(0);
     var insideBits = split($('.inside h2'));
 
     gsap.set([mood, menu, inside, edgeCut, edgeWedge], { clipPath: hide });
@@ -197,16 +224,12 @@
     tl.to(cut, { p: 1, duration: 1, ease: 'power2.in', onUpdate: openCut }, t);
     tl.addLabel('menu', t + .9);
     t += .55;
-    dishes.forEach(function (d, i) {
-      if (i) {
-        tl.to(track, { x: function () { return -i * dishes[0].el.offsetWidth; }, duration: 1, ease: 'power2.inOut' }, t);
-        t += .4;
-      }
-      tl.from(d.h, Object.assign({}, RISE, { duration: .35, stagger: .012, ease: 'back.out(2)' }), t);
-      tl.from(d.p, { y: 18, opacity: 0, duration: .3, stagger: .012 }, t + .15);
-      tl.fromTo(d.img, { scale: .8, opacity: 0 }, { scale: 1, opacity: 1, duration: .45, ease: 'back.out(1.5)' }, t);
-      t += 1;
-    });
+    tl.from('.dish > div', { x: -50, opacity: 0, duration: .4, stagger: .06, ease: 'power2.out' }, t - .25);
+    var step = { i: 0 };
+    stepStart = t + .2;
+    stepLength = dishes.length * .9;
+    tl.to(step, { i: dishes.length - .001, duration: stepLength, onUpdate: function () { lead(Math.floor(step.i)); } }, stepStart);
+    t = stepStart + stepLength + .15;
 
     tl.fromTo('.inside__bg', { scale: 1.16 }, { scale: 1, duration: 1.7 }, t);
     tl.to(wedge, { p: 1, duration: 1.1, ease: 'power1.inOut', onUpdate: openWedge }, t);
@@ -216,7 +239,7 @@
     tl.to({}, { duration: .01 }, t);
 
     var UNIT = .72;
-    var master = ScrollTrigger.create({
+    master = ScrollTrigger.create({
       animation: tl, trigger: stage, pin: true, start: 'top top', anticipatePin: 1, scrub: .45, invalidateOnRefresh: true,
       end: function () { return '+=' + t * UNIT * innerHeight; }
     });

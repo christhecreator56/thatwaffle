@@ -49,9 +49,26 @@ html.stage-on .stage{position:relative;z-index:1;height:100vh;height:100svh;over
 html.stage-on .stage>section,html.stage-on .edge{display:block;position:absolute;inset:0;height:100%;min-height:0;margin:0;isolation:isolate}
 html.stage-on .mood{display:grid}
 html.stage-on .edge{background:var(--justright)}
-html.stage-on .menu__scroll{overflow:hidden;height:100%}
-html.stage-on .dish{height:100%}
-html.stage-on .menu__track{height:100%}
+html.stage-on .menu{background:var(--bg,var(--umber));color:var(--fg,var(--justright));transition:background-color .55s ease,color .35s ease}
+html.stage-on .menu__scroll{overflow:visible;height:100%}
+html.stage-on .menu__track{display:flex;flex-direction:column;justify-content:center;width:47%;height:100%;padding:88px 0 32px max(24px,5vw);overflow-y:auto;scrollbar-width:none}
+html.stage-on .menu__track::-webkit-scrollbar{display:none}
+html.stage-on .dish.gutter{flex:none;display:block;width:auto;min-height:0;padding:0;background:none;color:inherit}
+html.stage-on .dish>div{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:var(--space-3);align-items:center;padding:12px 0;border-bottom:2px solid color-mix(in srgb,currentColor 28%,transparent)}
+html.stage-on .dish .count{display:none}
+html.stage-on .dish h3{grid-column:1;margin:0;font:inherit}
+html.stage-on .dish h3 button{appearance:none;display:block;width:100%;padding:0;border:0;background:none;color:inherit;text-align:left;cursor:pointer;font-family:var(--font-poster);font-size:clamp(24px,2.5vw,32px);line-height:1.05;letter-spacing:.03em;text-transform:uppercase;opacity:.74;transition:opacity .2s}
+html.stage-on .dish h3 button:hover{opacity:1}
+html.stage-on .dish.on h3{grid-column:1/-1}
+html.stage-on .dish.on h3 button{font-family:var(--font-display);font-size:clamp(56px,5.2vw,84px);line-height:.94;letter-spacing:0;text-transform:none;opacity:1}
+html.stage-on .dish .todo{grid-column:2;grid-row:1;transition:transform .3s}
+html.stage-on .dish.on .todo{grid-column:1;grid-row:3;justify-self:start;margin-top:10px}
+html.stage-on .dish:not(.on) .todo{transform:scale(.86)}
+html.stage-on .dish p{grid-column:1/-1;margin:0;max-width:40ch;max-height:0;overflow:hidden;opacity:0;font-size:18px;line-height:27px;transition:max-height .4s ease,opacity .3s ease,margin .4s ease}
+html.stage-on .dish.on p{max-height:84px;margin-top:8px;opacity:1}
+html.stage-on .dish .photo,html.stage-on .dish:nth-child(even) .photo{position:absolute;z-index:1;right:max(24px,5vw);top:50%;width:42vw;height:min(70vh,600px);margin-top:calc(min(70vh,600px)/-2);opacity:0;clip-path:circle(0% at 50% 50%);transform:scale(1.08);transition:clip-path .65s cubic-bezier(.6,0,.2,1),transform .8s ease,opacity .15s}
+html.stage-on .dish.on .photo,html.stage-on .dish.on:nth-child(even) .photo{z-index:2;opacity:1;clip-path:circle(85% at 50% 50%);transform:none}
+html.stage-on .photo[src*="fruit-pair"]{object-position:50% 88%}
 html.stage-on .share{margin-top:-100vh;margin-top:-100svh}
 html.stage-on .share,html.stage-on .offers,html.stage-on .visit{position:relative;min-height:100vh;min-height:100svh;display:grid;align-content:center;overflow:hidden;--dim:0}
 html.stage-on .share{z-index:2}
@@ -160,6 +177,10 @@ html.motion .inside:not(.in) .inside__arrows path{stroke-dashoffset:1;opacity:0}
   .hero__badge{top:auto;bottom:calc(13vh + 44vw);right:12px;width:92px}
   .hero__seal{display:none}
   .hero__ribbon{bottom:2vh}
+  html.stage-on .menu__track{justify-content:flex-start;width:100%;padding:calc(84px + 34vh + 14px) 16px 16px}
+  html.stage-on .dish .photo,html.stage-on .dish:nth-child(even) .photo{left:16px;right:16px;top:84px;width:auto;height:34vh;margin-top:0}
+  html.stage-on .dish.on h3 button{font-size:clamp(44px,12vw,60px)}
+  html.stage-on .dish p{font-size:16px;line-height:23px}
   .dish{grid-template-columns:minmax(0,1fr);gap:var(--space-4);align-content:center;padding-top:88px}
   .dish .photo{height:40vh}
   .inside.scene{display:flex;flex-direction:column;justify-content:center;height:auto;min-height:0;padding-top:84px}
