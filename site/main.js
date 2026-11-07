@@ -14,6 +14,41 @@
 
   tp.textContent = new Array(11).join('THAT WAFFLE PLACE  ●  ワッフル  ●  ');
 
+  // Arrows run from each label to its spot on the photo. Spots are stored as
+  // fractions of the image, so they stay on the food at any screen size.
+  var NS = 'http://www.w3.org/2000/svg', arrows = $('#insideArrows'), photo = $('#insideImg');
+  function arrowPath(cls, d) {
+    var p = document.createElementNS(NS, 'path');
+    p.setAttribute('class', cls);
+    p.setAttribute('d', d);
+    p.setAttribute('pathLength', '1');
+    return p;
+  }
+  function drawArrows() {
+    var W = photo.naturalWidth, H = photo.naturalHeight, bw = photo.offsetWidth, bh = photo.offsetHeight;
+    if (!W || !bw) return;
+    var s = Math.max(bw / W, bh / H), ox = photo.offsetLeft + (bw - W * s) * .5, oy = photo.offsetTop + (bh - H * s) * .6;
+    var phone = innerWidth < 900;
+    arrows.textContent = '';
+    $$('.facts li').forEach(function (li) {
+      var x = li.offsetLeft, y = li.offsetTop, w = li.offsetWidth, h = li.offsetHeight, side = phone ? 'top' : li.dataset.from;
+      var x1 = side === 'right' ? x + w : x + w / 2;
+      var y1 = side === 'top' ? y : side === 'bottom' ? y + h : y + h / 2;
+      var x2 = ox + li.dataset.u * W * s, y2 = oy + li.dataset.v * H * s;
+      var bend = (+li.dataset.bend) * (phone ? .12 : .2), cx = (x1 + x2) / 2 - (y2 - y1) * bend, cy = (y1 + y2) / 2 + (x2 - x1) * bend;
+      var a = Math.atan2(y2 - cy, x2 - cx), L = phone ? 12 : 17;
+      var curve = 'M' + x1.toFixed(1) + ' ' + y1.toFixed(1) + 'Q' + cx.toFixed(1) + ' ' + cy.toFixed(1) + ' ' + x2.toFixed(1) + ' ' + y2.toFixed(1);
+      var head = 'M' + (x2 - L * Math.cos(a - .5)).toFixed(1) + ' ' + (y2 - L * Math.sin(a - .5)).toFixed(1) + 'L' + x2.toFixed(1) + ' ' + y2.toFixed(1) + 'L' + (x2 - L * Math.cos(a + .5)).toFixed(1) + ' ' + (y2 - L * Math.sin(a + .5)).toFixed(1);
+      var g = document.createElementNS(NS, 'g');
+      [['under', curve], ['under', head], ['over', curve], ['over', head]].forEach(function (b) { g.appendChild(arrowPath(b[0], b[1])); });
+      arrows.appendChild(g);
+    });
+  }
+  photo.addEventListener('load', drawArrows);
+  if (photo.complete) drawArrows();
+  addEventListener('resize', drawArrows);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(drawArrows);
+
   if (!window.gsap || !window.ScrollTrigger || TWP.calm) return;
   gsap.registerPlugin(ScrollTrigger);
   document.documentElement.classList.add('motion');
@@ -162,9 +197,10 @@
 
     $$('.scene h2').forEach(function (h) { letters(split(h), { trigger: h, start: 'top 85%' }); });
     $$('.lede,.share__panel p:last-child').forEach(function (p) { words(split(p, true), { trigger: p, start: 'top 88%' }); });
-    open('.inside .photo', { trigger: '.inside .photo', start: 'top 80%' });
+    ScrollTrigger.create({ trigger: '.inside', start: 'top 45%', once: true, onEnter: function () { $('.inside').classList.add('in'); } });
+    gsap.from('.inside__bg', { scale: 1.14, ease: 'none', scrollTrigger: { trigger: '.inside', start: 'top bottom', end: 'top top', scrub: true } });
     open('.share__pics .a', { trigger: '.share__pics', start: 'top 80%' });
-    gsap.from('.facts li', { x: 40, opacity: 0, duration: .4, stagger: .1, ease: 'back.out(1.8)', scrollTrigger: { trigger: '.facts', start: 'top 80%' } });
+    gsap.from('.facts li', { scale: .7, opacity: 0, duration: .4, stagger: .22, ease: 'back.out(2)', scrollTrigger: { trigger: '.inside', start: 'top 45%' } });
     gsap.from('.share__pics .b', { y: 70, rotation: -14, duration: .6, ease: 'back.out(1.6)', scrollTrigger: { trigger: '.share__pics', start: 'top 70%' } });
     gsap.from('.offers__badge', { scale: 1.8, rotation: -24, opacity: 0, duration: .28, ease: 'power4.in', scrollTrigger: { trigger: '.offers__badge', start: 'top 90%' } });
     gsap.from('.visit dt,.visit dd', { x: -24, opacity: 0, duration: .35, stagger: .04, ease: 'power2.out', scrollTrigger: { trigger: '.visit dl', start: 'top 85%' } });
