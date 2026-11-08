@@ -1,11 +1,14 @@
-/* That Waffle Place! tokens, matching design-system/tokens.json */
+/* That Waffle Place tokens. Theme from the packaging: sky blue, chocolate, cream and waffle gold.
+   Older role names are kept so existing styles still work: umber is now chocolate, lily is sky blue,
+   santafe is waffle gold, justright is cream and dune is dark chocolate. */
 :root{
   color-scheme:light;
-  --umber:#8a2823;--umber-deep:#5f1a17;--justright:#eed4bc;--dune:#2e2c25;--santafe:#ad795a;--lily:#c4acb4;
+  --sky:#a9dae2;--choc:#3f2912;--cream:#fff6e6;--gold:#f7c368;
+  --umber:#3f2912;--umber-deep:#5c3a1c;--justright:#fff6e6;--dune:#26180b;--santafe:#f7c368;--lily:#a9dae2;
   --kinari:#fbfaf5;--yamabuki:#f8b500;--seiji:#7ebea5;--logo-waffle:#f7c368;
   --surface:var(--justright);--surface-raised:var(--kinari);--ink:var(--dune);--ink-soft:#5a4538;--ink-muted:#5a4538;
   --accent:var(--umber);--on-accent:var(--justright);--cta:var(--yamabuki);--on-cta:var(--dune);--line:#6b5546;--focus:var(--umber);
-  --sticker-sm:3px 3px 0 #2e2c25;--sticker-md:6px 6px 0 #2e2c25;--sticker-lg:10px 10px 0 #2e2c25;
+  --sticker-sm:3px 3px 0 #26180b;--sticker-md:6px 6px 0 #26180b;--sticker-lg:10px 10px 0 #26180b;
   --space-1:4px;--space-2:8px;--space-3:16px;--space-4:24px;--space-5:40px;--space-6:64px;--space-7:104px;
   --radius-sm:6px;--radius-md:14px;--radius-lg:28px;--radius-pill:999px;--radius-panel:240px;
   --font-display:Modak,"Arial Black",sans-serif;--font-poster:Ranchers,"Arial Narrow",sans-serif;

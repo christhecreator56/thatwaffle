@@ -1,5 +1,5 @@
 /* Admin layout. Components come from twp.css. */
-body{background:var(--justright);min-height:100vh}
+body{background:var(--sky);min-height:100vh}
 [hidden]{display:none!important}
 h1{margin:0;font-family:var(--font-display);font-weight:400;font-size:clamp(56px,9vw,84px);line-height:.92;color:var(--umber)}
 h2{margin:0;font-family:var(--font-poster);font-weight:400;font-size:30px;letter-spacing:.03em;text-transform:uppercase}

@@ -245,7 +245,7 @@
     });
 
     // Lower sections slide up over the one before, which holds and dims.
-    var order = ['.share', '.offers', '.visit', '.twp-foot'].map($);
+    var order = ['.story', '.share', '.offers', '.visit', '.twp-foot'].map($);
     var R = Math.min(innerWidth * .1, 120);
     order.forEach(function (next, i) {
       gsap.fromTo(next, { borderTopLeftRadius: R, borderTopRightRadius: R }, { borderTopLeftRadius: 0, borderTopRightRadius: 0, ease: 'none', scrollTrigger: { trigger: next, start: 'top bottom', end: 'top top', scrub: true } });
@@ -255,10 +255,15 @@
       gsap.to(prev, { '--dim': .6, ease: 'none', scrollTrigger: { trigger: next, start: 'top bottom', end: 'top top', scrub: true } });
     });
 
-    $$('.share h2,.offers h2,.visit h2').forEach(function (h) { letters(split(h), { trigger: h, start: 'top 80%' }); });
+    $$('.story h2,.share h2,.offers h2,.visit h2').forEach(function (h) { letters(split(h), { trigger: h, start: 'top 80%' }); });
     $$('.lede,.share__panel p:last-child').forEach(function (p) { words(split(p, true), { trigger: p, start: 'top 85%' }); });
     gsap.from('.share__pics .a', { scale: .8, rotation: 9, opacity: 0, duration: .7, ease: 'back.out(1.5)', scrollTrigger: { trigger: '.share__pics', start: 'top 75%' } });
     gsap.from('.share__pics .b', { y: 70, rotation: -14, opacity: 0, duration: .6, delay: .15, ease: 'back.out(1.6)', scrollTrigger: { trigger: '.share__pics', start: 'top 75%' } });
+    gsap.from('.rate', { y: 50, rotation: function (i) { return (i - 1) * 3; }, opacity: 0, duration: .55, stagger: .12, ease: 'back.out(1.6)', scrollTrigger: { trigger: '.ratings', start: 'top 75%' } });
+    $$('.rate b').forEach(function (b) {
+      var end = parseFloat(b.textContent), n = { v: 0 };
+      gsap.to(n, { v: end, duration: 1.4, ease: 'power2.out', scrollTrigger: { trigger: '.ratings', start: 'top 75%' }, onUpdate: function () { b.textContent = n.v.toFixed(1); } });
+    });
     gsap.from('.offers__badge', { scale: 1.8, rotation: -24, opacity: 0, duration: .28, ease: 'power4.in', scrollTrigger: { trigger: '.offers__badge', start: 'top 85%' } });
     gsap.from('.visit__card', { x: -60, opacity: 0, duration: .6, ease: 'back.out(1.5)', scrollTrigger: { trigger: '.visit', start: 'top 60%' } });
     gsap.from('.twp-foot__grid > *', { y: 30, opacity: 0, duration: .5, stagger: .08, ease: 'power2.out', scrollTrigger: { trigger: '.twp-foot__panel', start: 'top 75%' } });
