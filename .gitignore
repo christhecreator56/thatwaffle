@@ -1,7 +1,38 @@
-# Raw client files stay local
-*.jpeg
-*.pdf
+# Environments and Secrets (Zero tolerance for committed credentials)
+.env
+.env.*
+!.env.example
+*.local.json
+!*.local.example.json
+*.local.sql
+local_db.json
+*.pem
+*.key
+*.cert
+
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+env/
+
+# Uploaded media and temporary test assets
+site/uploads/
+*.tmp
+test_*.jpg
+test_*.png
+
+# Node & deployment builds
 node_modules/
 .vercel/
 .claude/
-*.local.sql
+
+# Operating System & IDE metadata
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
