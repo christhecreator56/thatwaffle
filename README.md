@@ -2,6 +2,15 @@
 
 Official web application, brand design system, and automated WhatsApp marketing engine for **That Waffle Place**, Teynampet, Chennai.
 
+> **Production Status: LIVE & VERIFIED**  
+> - **Official Business Number**: `+91 80564 48118` (Verified Name: `Thatwaffle place`)  
+> - **Phone Number ID**: `1465237300010288`  
+> - **WhatsApp Business Account (WABA) ID**: `1450318450622796`  
+> - **Meta App ID**: `1449920199851529`  
+> - **Engine Mode**: `meta_live` (Permanent System Token installed in `whatsapp.local.json`)  
+> - **Live Sender Dashboard**: [http://localhost:8080/api/send-whatsapp](http://localhost:8080/api/send-whatsapp)  
+> - **Admin Studio**: [http://localhost:8080/admin](http://localhost:8080/admin)  
+
 ---
 
 ## 🧇 Key Capabilities

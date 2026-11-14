@@ -434,7 +434,19 @@
   }
 
   function getOfferBroadcast(offerId) {
-    return broadcasts.find(function (b) { return b.offer_id === offerId; });
+    if (!offerId) return null;
+    var matches = broadcasts.filter(function (b) { return b.offer_id === offerId; });
+    if (!matches.length) return null;
+    // 1. If there's an active scheduled or processing broadcast, always prefer it
+    var active = matches.find(function (b) { return b.status === 'scheduled' || b.status === 'processing'; });
+    if (active) return active;
+    // 2. Otherwise return the newest one by timestamp
+    matches.sort(function (a, b) {
+      var ta = a.completed_at || a.created_at || a.scheduled_at || '';
+      var tb = b.completed_at || b.created_at || b.scheduled_at || '';
+      return tb.localeCompare(ta);
+    });
+    return matches[0];
   }
 
   function drawOffers() {
@@ -448,7 +460,11 @@
 
       if (b) {
         if (b.status === 'completed') {
-          pills.push({ text: 'WhatsApp Sent (' + (b.sent_count || 0) + '/' + (b.total_recipients || 0) + ')', cls: 'pill--broadcast' });
+          if ((b.total_recipients || 0) === 0) {
+            pills.push({ text: 'WhatsApp: 0 Customers in CRM', cls: 'pill--failed' });
+          } else {
+            pills.push({ text: 'WhatsApp Sent (' + (b.sent_count || 0) + '/' + (b.total_recipients || 0) + ')', cls: 'pill--broadcast' });
+          }
         } else if (b.status === 'scheduled') {
           pills.push({ text: 'WhatsApp Scheduled: ' + formatDateTime(b.scheduled_at), cls: 'pill--scheduled' });
           var sendNow = el('button', 'acts__primary', 'Drop now');
@@ -555,9 +571,11 @@
     var checked = $('o-broadcast').checked;
     $('waDetails').hidden = !checked;
     if (checked && !$('o-btime').value) {
-      // Default to starts_on at 10:00 AM IST or tomorrow 10:00 AM
-      var s = $('o-start').value || today();
-      $('o-btime').value = s + 'T10:00';
+      // Default to now + 10 minutes local time
+      var d = new Date();
+      d.setMinutes(d.getMinutes() + 10);
+      var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+      $('o-btime').value = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
     }
     updateOfferFormButtons();
   }
@@ -760,7 +778,9 @@
           var savedOffer = must(r)[0];
           if (doBroadcast || sendImmediately) {
             var scheduledIso = sendImmediately ? new Date().toISOString() : new Date(btime).toISOString();
-            var existingB = getOfferBroadcast(savedOffer.id);
+            var existingScheduled = broadcasts.find(function (b) {
+              return b.offer_id === savedOffer.id && (b.status === 'scheduled' || b.status === 'processing');
+            });
             var bRow = {
               offer_id: savedOffer.id,
               scheduled_at: scheduledIso,
@@ -772,13 +792,13 @@
               terms: savedOffer.terms,
               poster_url: savedOffer.poster_url || ''
             };
-            var bp = (existingB && existingB.status === 'scheduled') ?
-              db.from('broadcasts').update(bRow).eq('id', existingB.id).select() :
+            var bp = existingScheduled ?
+              db.from('broadcasts').update(bRow).eq('id', existingScheduled.id).select() :
               db.from('broadcasts').insert(bRow).select();
 
             return bp.then(function (br) {
               var savedB = (br && br.data && br.data[0]) || (must(br)[0]);
-              var broadcastId = savedB ? savedB.id : (existingB ? existingB.id : null);
+              var broadcastId = savedB ? savedB.id : (existingScheduled ? existingScheduled.id : null);
               if (sendImmediately && broadcastId) {
                 if (sendNowBtn) sendNowBtn.textContent = 'Dispatching WhatsApp...';
                 return fetch('/api/dispatch-broadcast', {
@@ -795,9 +815,11 @@
               return { scheduled: true, scheduledIso: scheduledIso };
             });
           } else if (editingOffer) {
-            var existingB = getOfferBroadcast(editingOffer.id);
-            if (existingB && existingB.status === 'scheduled') {
-              return db.from('broadcasts').delete().eq('id', existingB.id);
+            var existingScheduled = broadcasts.find(function (b) {
+              return b.offer_id === editingOffer.id && b.status === 'scheduled';
+            });
+            if (existingScheduled) {
+              return db.from('broadcasts').delete().eq('id', existingScheduled.id);
             }
           }
         });
@@ -831,11 +853,12 @@
       });
     } else if (doBroadcast) {
       var timeStr = btime ? formatDateTime(new Date(btime).toISOString()) : 'the scheduled time';
+      var note0 = subCount === 0 ? '<br><br><span style="color:#e65100;font-weight:700;">⚠️ Notice: You currently have 0 subscribed customers in your database. Add customer phone numbers in the "Customers" tab first so the broadcast has recipients to send to!</span>' : '';
       askConfirm({
         title: 'Schedule WhatsApp Broadcast?',
-        message: 'This will save the offer "' + name + '" and schedule the WhatsApp broadcast to ' + audienceStr + ' for ' + timeStr + '. Proceed?',
+        message: 'This will save the offer "' + name + '" and schedule the WhatsApp broadcast to ' + audienceStr + ' for ' + timeStr + '.' + note0 + '<br><br>Proceed?',
         confirmText: 'Schedule Broadcast',
-        tone: 'wa'
+        tone: subCount === 0 ? 'danger' : 'wa'
       }).then(function (ok) {
         if (ok) executeSave();
       });
