@@ -79,4 +79,55 @@
     var hours = d[2][0] && d[2][0].hours.trim();
     if (hours) document.getElementById('hours').textContent = hours;
   }).catch(function () {}).then(function () { clearTimeout(timer); });
+
+  // WhatsApp Opt-in Form submission
+  var optForm = document.getElementById('optInForm');
+  if (optForm) {
+    optForm.addEventListener('submit', function (ev) {
+      ev.preventDefault();
+      var err = document.getElementById('optin-err');
+      if (err) err.textContent = '';
+      var name = (optForm.elements['name'] && optForm.elements['name'].value.trim()) || '';
+      var rawPhone = (optForm.elements['phone'] && optForm.elements['phone'].value.trim().replace(/\D/g, '')) || '';
+      var opted = optForm.elements['optedIn'] && optForm.elements['optedIn'].checked;
+
+      if (!name) {
+        if (err) err.textContent = 'Add your name so we know who to message.';
+        return optForm.elements['name'].focus();
+      }
+      if (!/^[6-9][0-9]{9}$/.test(rawPhone)) {
+        if (err) err.textContent = 'Enter a valid 10-digit mobile number.';
+        return optForm.elements['phone'].focus();
+      }
+      if (!opted) {
+        if (err) err.textContent = 'Tick the consent box to receive WhatsApp offers.';
+        return optForm.elements['optedIn'].focus();
+      }
+
+      var submitBtn = optForm.querySelector('[type=submit]');
+      if (submitBtn) submitBtn.disabled = true;
+
+      fetch(c.url + '/rest/v1/customers', {
+        method: 'POST',
+        headers: {
+          'apikey': c.anonKey,
+          'Authorization': 'Bearer ' + c.anonKey,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify({
+          name: name,
+          phone: '+91' + rawPhone,
+          is_subscribed: true,
+          source: 'website'
+        })
+      }).then(function (r) {
+        if (!r.ok && r.status !== 409) throw new Error('Status ' + r.status);
+        optForm.innerHTML = '<div class="twp-ok" role="status"><span>🧇 You\'re in, ' + name.replace(/[<>&]/g, '') + '! Watch your WhatsApp for That Offer.</span></div>';
+      }).catch(function () {
+        if (err) err.textContent = 'Could not save your opt-in right now. Try again later.';
+        if (submitBtn) submitBtn.disabled = false;
+      });
+    });
+  }
 })();

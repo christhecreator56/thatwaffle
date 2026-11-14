@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="stylesheet" href="/tokens.css">
 <link rel="stylesheet" href="/twp.css">
-<link rel="stylesheet" href="/admin/admin.css">
+<link rel="stylesheet" href="/admin/admin.css?v=9">
 </head>
 <body>
 
@@ -33,6 +33,7 @@
     <nav aria-label="Admin sections">
       <button type="button" class="tab" data-tab="offers" aria-pressed="true">Offers</button>
       <button type="button" class="tab" data-tab="menu" aria-pressed="false">Menu</button>
+      <button type="button" class="tab" data-tab="customers" aria-pressed="false">Customers</button>
       <button type="button" class="tab" data-tab="hours" aria-pressed="false">Hours</button>
     </nav>
     <button type="button" class="top__out" id="logout">Log out</button>
@@ -51,11 +52,256 @@
           <div class="twp-field"><label for="o-start">Starts</label><div class="twp-input"><input id="o-start" type="date" required></div></div>
           <div class="twp-field"><label for="o-end">Ends</label><div class="twp-input"><input id="o-end" type="date" required></div></div>
         </div>
+        <p class="twp-err twp-field-err" id="o-date-err" role="alert" hidden></p>
         <div class="twp-field"><label for="o-terms">Terms</label><div class="twp-input"><textarea id="o-terms" required rows="3" maxlength="500"></textarea></div></div>
-        <div class="twp-field"><label for="o-poster">Poster (JPG, PNG or WebP, under 5 MB)</label><input id="o-poster" type="file" accept="image/jpeg,image/png,image/webp"></div>
+        <div class="twp-field">
+          <label for="o-poster">Offer Poster</label>
+          <div class="twp-uploader" id="o-poster-uploader">
+            <input id="o-poster" type="file" accept="image/jpeg,image/png,image/webp" class="twp-uploader__input" hidden>
+            
+            <!-- Dropzone / Empty State -->
+            <div class="twp-uploader__dropzone" id="o-poster-dropzone" tabindex="0" role="button" aria-label="Upload offer poster photo">
+              <div class="twp-uploader__icon">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="3" y="3" width="18" height="18" rx="3" ry="3"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+              </div>
+              <div class="twp-uploader__info">
+                <span class="twp-uploader__title"><b>Choose photo</b> or drag & drop</span>
+                <span class="twp-uploader__hint">JPG, PNG or WebP &bull; up to 5 MB</span>
+              </div>
+            </div>
+
+            <!-- Active Thumbnail Preview Card -->
+            <div class="twp-uploader__preview" id="o-poster-preview" hidden>
+              <div class="twp-uploader__thumb-box">
+                <img id="o-poster-img" src="" alt="Offer poster" class="twp-uploader__thumb">
+                <span class="twp-uploader__badge" id="o-poster-badge">✓ Selected</span>
+              </div>
+              <div class="twp-uploader__meta">
+                <div class="twp-uploader__file-info">
+                  <span class="twp-uploader__name" id="o-poster-name">image.jpg</span>
+                  <span class="twp-uploader__size" id="o-poster-size">120 KB</span>
+                </div>
+                <div class="twp-uploader__actions">
+                  <button type="button" class="twp-uploader__btn" id="o-poster-change">Change</button>
+                  <button type="button" class="twp-uploader__btn twp-uploader__btn--danger" id="o-poster-remove">Remove</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <label class="twp-check" for="o-visible"><input id="o-visible" type="checkbox" checked><span>Show on the website</span></label>
+
+        <!-- WhatsApp Broadcast Scheduler Section -->
+        <div class="wa-box">
+          <label class="twp-check" for="o-broadcast"><input id="o-broadcast" type="checkbox"><span><b>Schedule WhatsApp Broadcast to all customers</b></span></label>
+          <div id="waDetails" class="wa-details" hidden>
+            <div class="twp-field wa-time-field">
+              <label for="o-btime">Broadcast Send Date & Time (IST)</label>
+              <div class="twp-input"><input id="o-btime" type="datetime-local"></div>
+              <small class="twp-note">When this time arrives, the offer drops on all subscribed WhatsApp numbers automatically.</small>
+            </div>
+
+            <!-- WhatsApp Marketing Studio: Live Phone Mockup & Campaign Details -->
+            <div class="wa-studio">
+              <!-- Left Column: Realistic Phone Simulator -->
+              <div class="wa-phone-wrap">
+                <div class="wa-phone-header-label">
+                  <div class="wa-phone-title">
+                    <span class="wa-live-indicator" aria-hidden="true"></span>
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                    <span>Live Customer Preview</span>
+                  </div>
+                  <span class="wa-preview__badge">
+                    <svg class="wa-badge-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"/>
+                      <path d="M8 12l3 3 5-6"/>
+                    </svg>
+                    Meta Cloud API
+                  </span>
+                </div>
+                
+                <div class="wa-phone">
+                  <!-- Phone Notch / Status Bar -->
+                  <div class="wa-phone__notch">
+                    <span class="wa-phone__time">9:41</span>
+                    <span class="wa-phone__speaker"></span>
+                    <div class="wa-phone__icons">
+                      <svg width="15" height="11" viewBox="0 0 15 11" fill="currentColor"><path d="M0 2.5C2 0.8 5 0 7.5 0s5.5 0.8 7.5 2.5l-7.5 8.5L0 2.5z"/></svg>
+                      <svg width="14" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L4.35 21l3.48-.91C9.28 20.66 10.6 21 12 21c4.97 0 9-4.03 9-9s-4.03-9-9-9z"/></svg>
+                      <svg width="18" height="11" viewBox="0 0 18 11" fill="currentColor"><rect x="0" y="0" width="15" height="11" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.2"/><rect x="2" y="2" width="10" height="7" rx="1.5"/><rect x="16" y="3.5" width="2" height="4" rx="1"/></svg>
+                    </div>
+                  </div>
+
+                  <!-- WhatsApp Business Header -->
+                  <div class="wa-appbar">
+                    <div class="wa-appbar__back">
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                    </div>
+                    <div class="wa-appbar__avatar">
+                      <img src="/assets/badge-waffle.svg" alt="That Waffle Place">
+                    </div>
+                    <div class="wa-appbar__info">
+                      <div class="wa-appbar__name">
+                        <span>That Waffle Place</span>
+                        <svg class="wa-verified" viewBox="0 0 18 18" width="14" height="14" fill="#25d366" aria-hidden="true"><circle cx="9" cy="9" r="8"/><path d="M6 9l2 2 4-4" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                      </div>
+                      <div class="wa-appbar__status">Official Business Account</div>
+                    </div>
+                    <div class="wa-appbar__actions">
+                      <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" aria-hidden="true"><path d="M17 10.5V7a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+                      <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><path d="M20.01 15.38c-1.23 0-2.42-.2-3.53-.56a.977.977 0 0 0-1.01.24l-1.57 1.97c-2.83-1.35-5.48-3.9-6.89-6.83l1.95-1.66c.27-.28.35-.67.24-1.02-.37-1.11-.56-2.3-.56-3.53 0-.54-.45-.99-.99-.99H4.19C3.65 3 3 3.24 3 3.99 3 13.28 10.73 21 20.01 21c.71 0 .99-.63.99-1.18v-3.45c0-.54-.45-.99-.99-.99z"/></svg>
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><circle cx="12" cy="6" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="18" r="1.8"/></svg>
+                    </div>
+                  </div>
+
+                  <!-- WhatsApp Chat Screen with Pattern -->
+                  <div class="wa-chat">
+                    <!-- Date Chip -->
+                    <div class="wa-chat__date"><span>TODAY</span></div>
+                    
+                    <!-- Encryption Notice -->
+                    <div class="wa-chat__enc">
+                      <svg viewBox="0 0 24 24" width="11" height="11" fill="currentColor" style="flex:none; vertical-align:middle; margin-right:4px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                      <span>Messages and calls are end-to-end encrypted. No one outside of this chat can read them.</span>
+                    </div>
+
+                    <!-- Speech Bubble -->
+                    <div class="wa-bubble">
+                      <!-- Bubble Tail SVG -->
+                      <svg class="wa-bubble__tail" viewBox="0 0 8 13" width="8" height="13">
+                        <path d="M1.533 3.568L8 12.193V0H2.812C1.042 0 .474 2.156 1.533 3.568z" fill="#ffffff"/>
+                      </svg>
+
+                      <!-- Media Header: Edge-to-Edge Full Bleed Image -->
+                      <div class="wa-bubble__img is-default-badge" id="waPrevImg">
+                        <img src="/assets/badge-waffle.svg" alt="Offer Banner" id="waThumb">
+                      </div>
+
+                      <!-- Message Body with Native WhatsApp Typography -->
+                      <div class="wa-bubble__body">
+                        <p class="wa-msg-greeting">Hey <strong>{{Customer Name}}</strong>! 🧇 Fresh offer from <strong>That Waffle Place</strong>:</p>
+                        
+                        <!-- Authentic WhatsApp Blockquote Highlight -->
+                        <div class="wa-msg-quote">
+                          <div class="wa-msg-title-row">
+                            <span class="wa-msg-fire">🔥</span>
+                            <strong class="wa-msg-title" id="waPrevName">WEEEKEND OFFER</strong>
+                          </div>
+                          <div class="wa-msg-disc-row">
+                            <span class="wa-msg-badge-tag">OFFER</span>
+                            <strong class="wa-msg-disc" id="waPrevDisc">10% off</strong> on your order!
+                          </div>
+                          <div class="wa-msg-dates-row">
+                            <span class="wa-msg-label">📅 Valid:</span>
+                            <span id="waPrevDates">14 Nov to 15 Nov</span>
+                          </div>
+                          <div class="wa-msg-terms-row">
+                            <span class="wa-msg-label">📝 Terms:</span>
+                            <span id="waPrevTerms">Terms apply. Dine-in only.</span>
+                          </div>
+                        </div>
+
+                        <p class="wa-msg-cta-hint">Show this message at the counter or order online to claim! 🧇✨</p>
+
+                        <!-- Footer disclaimer & time -->
+                        <div class="wa-bubble__meta">
+                          <span class="wa-bubble__subnote">Reply STOP to unsubscribe</span>
+                          <div class="wa-bubble__time">
+                            <span>10:00 AM</span>
+                            <svg class="wa-bubble__ticks" viewBox="0 0 16 11" width="16" height="11" fill="none" stroke="#53bdeb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 6l3.5 3.5L11 1"/><path d="M5.5 6l3.5 3.5L15 1"/></svg>
+                          </div>
+                        </div>
+                      </div>
+
+                      <!-- Official WhatsApp Interactive Action Buttons (Full width stacked) -->
+                      <div class="wa-bubble__actions">
+                        <div class="wa-action-btn">
+                          <svg class="wa-action-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l2-5h14l2 5"></path><path d="M21 9v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9"></path><path d="M3 9h18"></path><path d="M9 22V13h6v9"></path></svg>
+                          <span>Claim In-Store</span>
+                        </div>
+                        <div class="wa-action-btn">
+                          <svg class="wa-action-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+                          <span>Visit Website</span>
+                          <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:2px; opacity:0.75;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Home Indicator Bar -->
+                  <div class="wa-phone__bottom">
+                    <div class="wa-phone__home-bar"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right Column: Campaign Control & Automation Intelligence -->
+              <div class="wa-info-col">
+                <div class="wa-card">
+                  <div class="wa-card__title">
+                    <svg class="wa-card__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#008069" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    <h3>Campaign Intelligence</h3>
+                  </div>
+                  <div class="wa-card__specs">
+                    <div class="wa-spec-item">
+                      <span class="wa-spec-lbl">Target Audience</span>
+                      <span class="wa-spec-val" id="waAudienceVal">Subscribed Customers</span>
+                    </div>
+                    <div class="wa-spec-item">
+                      <span class="wa-spec-lbl">Template ID</span>
+                      <span class="wa-spec-val"><code>twp_offer_broadcast</code></span>
+                    </div>
+                    <div class="wa-spec-item">
+                      <span class="wa-spec-lbl">Delivery Engine</span>
+                      <span class="wa-spec-val">Meta Cloud API v21.0</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="wa-card">
+                  <div class="wa-card__title">
+                    <svg class="wa-card__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#008069" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+                    <h3>Smart Personalization</h3>
+                  </div>
+                  <p class="wa-card__desc">Each customer receives a customized WhatsApp message with their real name automatically rendered by Meta.</p>
+                  <ul class="wa-tokens-list">
+                    <li><code>{{1}}</code> ➔ Customer's Name</li>
+                    <li><code>{{2}}</code> ➔ Offer Name</li>
+                    <li><code>{{3}}</code> ➔ Discount & Dates</li>
+                  </ul>
+                </div>
+
+                <!-- Instant Test Message Box -->
+                <div class="wa-card wa-test-card">
+                  <div class="wa-card__title">
+                    <svg class="wa-card__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#008069" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                    <h3>Instant Test Message</h3>
+                  </div>
+                  <p class="wa-card__desc">Send a real sample message right now to test on your phone before the public drop.</p>
+                  <div class="wa-test__row">
+                    <div class="twp-input"><span>+91</span><input id="testPhone" type="tel" maxlength="10" placeholder="Your mobile number"></div>
+                    <button type="button" class="twp-btn twp-btn--ghost" id="sendTestBtn">Send test</button>
+                  </div>
+                  <span id="testMsg" class="twp-note"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <p class="twp-err" id="offerMsg" role="alert"></p>
-        <div class="row"><button class="twp-btn" type="submit">Save offer</button><button class="twp-btn twp-btn--ghost" type="button" data-cancel="offerForm">Cancel</button></div>
+        <div class="row" id="offerActions">
+          <button class="twp-btn" type="submit" id="saveOfferBtn">Save offer</button>
+          <button class="twp-btn twp-btn--wa" type="button" id="saveAndSendNowBtn" hidden>
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg>
+            Send Broadcast Now
+          </button>
+          <button class="twp-btn twp-btn--ghost" type="button" data-cancel="offerForm">Cancel</button>
+        </div>
       </form>
       <ul class="list" id="offerList"></ul>
     </section>
@@ -70,13 +316,192 @@
           <div class="twp-field"><label for="m-price">Price in rupees</label><div class="twp-input"><span>₹</span><input id="m-price" type="number" min="0" step="1" inputmode="numeric"></div></div>
           <div class="twp-field"><label for="m-pos">Order on the menu</label><div class="twp-input"><input id="m-pos" type="number" step="1" inputmode="numeric" required></div></div>
         </div>
-        <div class="twp-field"><label for="m-scene">Background colour</label><div class="twp-input"><select id="m-scene"><option value="umber">Burnt umber</option><option value="dune">Dune</option><option value="lily">Lily</option><option value="umber-deep">Deep umber</option></select></div></div>
-        <div class="twp-field"><label for="m-photo">Photo (JPG, PNG or WebP, under 5 MB)</label><input id="m-photo" type="file" accept="image/jpeg,image/png,image/webp"></div>
+        <div class="twp-field">
+          <label for="m-scene">Background colour</label>
+          <div class="twp-dropdown" id="dropdown-scene">
+            <button type="button" class="twp-dropdown__btn" id="dropdown-scene-btn" aria-haspopup="listbox" aria-expanded="false">
+              <span class="twp-dropdown__selected"><span class="scene-dot" style="background:var(--umber);"></span> Burnt umber</span>
+              <svg class="twp-dropdown__arrow" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+            <ul class="twp-dropdown__menu" role="listbox" id="dropdown-scene-menu" hidden>
+              <li role="option" data-value="umber" class="twp-dropdown__opt is-selected" aria-selected="true">
+                <span class="twp-dropdown__opt-text"><span class="scene-dot" style="background:var(--umber);"></span> Burnt umber</span>
+                <span class="twp-dropdown__check">✓</span>
+              </li>
+              <li role="option" data-value="dune" class="twp-dropdown__opt" aria-selected="false">
+                <span class="twp-dropdown__opt-text"><span class="scene-dot" style="background:var(--dune);"></span> Dune</span>
+                <span class="twp-dropdown__check">✓</span>
+              </li>
+              <li role="option" data-value="lily" class="twp-dropdown__opt" aria-selected="false">
+                <span class="twp-dropdown__opt-text"><span class="scene-dot" style="background:var(--lily);"></span> Lily</span>
+                <span class="twp-dropdown__check">✓</span>
+              </li>
+              <li role="option" data-value="umber-deep" class="twp-dropdown__opt" aria-selected="false">
+                <span class="twp-dropdown__opt-text"><span class="scene-dot" style="background:var(--umber-deep);"></span> Deep umber</span>
+                <span class="twp-dropdown__check">✓</span>
+              </li>
+            </ul>
+            <input type="hidden" id="m-scene" value="umber">
+          </div>
+        </div>
+        <div class="twp-field">
+          <label for="m-photo">Item Photo</label>
+          <div class="twp-uploader" id="m-photo-uploader">
+            <input id="m-photo" type="file" accept="image/jpeg,image/png,image/webp" class="twp-uploader__input" hidden>
+            
+            <!-- Dropzone / Empty State -->
+            <div class="twp-uploader__dropzone" id="m-photo-dropzone" tabindex="0" role="button" aria-label="Upload menu item photo">
+              <div class="twp-uploader__icon">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="3" y="3" width="18" height="18" rx="3" ry="3"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+              </div>
+              <div class="twp-uploader__info">
+                <span class="twp-uploader__title"><b>Choose photo</b> or drag & drop</span>
+                <span class="twp-uploader__hint">JPG, PNG or WebP &bull; up to 5 MB</span>
+              </div>
+            </div>
+
+            <!-- Active Thumbnail Preview Card -->
+            <div class="twp-uploader__preview" id="m-photo-preview" hidden>
+              <div class="twp-uploader__thumb-box">
+                <img id="m-photo-img" src="" alt="Menu item photo" class="twp-uploader__thumb">
+                <span class="twp-uploader__badge" id="m-photo-badge">✓ Selected</span>
+              </div>
+              <div class="twp-uploader__meta">
+                <div class="twp-uploader__file-info">
+                  <span class="twp-uploader__name" id="m-photo-name">item.jpg</span>
+                  <span class="twp-uploader__size" id="m-photo-size">120 KB</span>
+                </div>
+                <div class="twp-uploader__actions">
+                  <button type="button" class="twp-uploader__btn" id="m-photo-change">Change</button>
+                  <button type="button" class="twp-uploader__btn twp-uploader__btn--danger" id="m-photo-remove">Remove</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <label class="twp-check" for="m-visible"><input id="m-visible" type="checkbox" checked><span>Show on the website</span></label>
         <p class="twp-err" id="itemMsg" role="alert"></p>
         <div class="row"><button class="twp-btn" type="submit">Save item</button><button class="twp-btn twp-btn--ghost" type="button" data-cancel="itemForm">Cancel</button></div>
       </form>
       <ul class="list" id="itemList"></ul>
+    </section>
+
+    <!-- Customers & WhatsApp Opt-ins Section -->
+    <section id="tab-customers" hidden>
+      <div class="head">
+        <h1>customers</h1>
+        <div class="row">
+          <button type="button" class="twp-btn" id="newCustomer">Add customer</button>
+          <button type="button" class="twp-btn twp-btn--ghost" id="importCsvBtn">Import CSV</button>
+          <button type="button" class="twp-btn twp-btn--ghost" id="csvFormatBtn">CSV Format</button>
+          <input type="file" id="csvFileInput" accept=".csv,.txt" hidden>
+        </div>
+      </div>
+
+      <!-- Customer Metrics Banner -->
+      <div class="stat-grid">
+        <div class="stat-card">
+          <span class="stat-card__val" id="countSubscribed">0</span>
+          <span class="stat-card__lbl">Active WhatsApp Subscriptions</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-card__val" id="countUnsubscribed">0</span>
+          <span class="stat-card__lbl">Unsubscribed</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-card__val" id="countBroadcasts">0</span>
+          <span class="stat-card__lbl">Broadcast Campaigns</span>
+        </div>
+      </div>
+
+      <!-- Add Customer Form -->
+      <form class="twp-form editor" id="customerForm" hidden>
+        <h2 id="customerFormTitle">Add customer</h2>
+        <div class="split">
+          <div class="twp-field"><label for="c-name">Customer name</label><div class="twp-input"><input id="c-name" required maxlength="80"></div></div>
+          <div class="twp-field"><label for="c-phone">WhatsApp number</label><div class="twp-input"><span>+91</span><input id="c-phone" type="tel" required maxlength="10" placeholder="9876543210"></div></div>
+        </div>
+
+        <!-- Custom Enhanced Dropdown for Source -->
+        <div class="twp-field">
+          <label for="c-source">Source</label>
+          <div class="twp-dropdown" id="dropdown-source">
+            <button type="button" class="twp-dropdown__btn" id="dropdown-source-btn" aria-haspopup="listbox" aria-expanded="false">
+              <span class="twp-dropdown__selected">
+                <svg class="twp-opt-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M3 9l2-5h14l2 5"></path>
+                  <path d="M21 9v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9"></path>
+                  <path d="M3 9h18"></path>
+                  <path d="M9 22V13h6v9"></path>
+                </svg>
+                In-store Counter
+              </span>
+              <svg class="twp-dropdown__arrow" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </button>
+            <ul class="twp-dropdown__menu" role="listbox" id="dropdown-source-menu" hidden>
+              <li role="option" data-value="counter" class="twp-dropdown__opt is-selected" aria-selected="true">
+                <span class="twp-dropdown__opt-text">
+                  <svg class="twp-opt-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 9l2-5h14l2 5"></path>
+                    <path d="M21 9v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9"></path>
+                    <path d="M3 9h18"></path>
+                    <path d="M9 22V13h6v9"></path>
+                  </svg>
+                  In-store Counter
+                </span>
+                <svg class="twp-dropdown__check" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </li>
+              <li role="option" data-value="website" class="twp-dropdown__opt" aria-selected="false">
+                <span class="twp-dropdown__opt-text">
+                  <svg class="twp-opt-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="2" y1="12" x2="22" y2="12"></line>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                  </svg>
+                  Website Form
+                </span>
+                <svg class="twp-dropdown__check" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </li>
+              <li role="option" data-value="import" class="twp-dropdown__opt" aria-selected="false">
+                <span class="twp-dropdown__opt-text">
+                  <svg class="twp-opt-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <line x1="10" y1="9" x2="8" y2="9"></line>
+                  </svg>
+                  CSV / Manual Import
+                </span>
+                <svg class="twp-dropdown__check" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </li>
+            </ul>
+            <input type="hidden" id="c-source" value="counter">
+          </div>
+        </div>
+
+        <p class="twp-err" id="customerMsg" role="alert"></p>
+        <div class="row"><button class="twp-btn" type="submit">Save customer</button><button class="twp-btn twp-btn--ghost" type="button" data-cancel="customerForm">Cancel</button></div>
+      </form>
+
+      <!-- Customer Search -->
+      <div class="twp-field">
+        <div class="twp-input"><input id="searchCustomers" type="search" placeholder="Search customer name or phone..."></div>
+      </div>
+
+      <ul class="list" id="customerList"></ul>
     </section>
 
     <section id="tab-hours" hidden>
@@ -90,8 +515,89 @@
   </main>
 </div>
 
+<div class="twp-modal-backdrop" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmDesc" hidden>
+  <div class="twp-modal">
+    <div class="twp-modal__head">
+      <span class="twp-modal__icon" id="confirmIcon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+      </span>
+      <h2 class="twp-modal__title" id="confirmTitle">Confirm action</h2>
+    </div>
+    <p class="twp-modal__desc" id="confirmDesc"></p>
+    <div class="twp-modal__actions">
+      <button type="button" class="twp-btn twp-btn--ghost" id="confirmCancelBtn">Cancel</button>
+      <button type="button" class="twp-btn twp-modal__confirm" id="confirmOkBtn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="twp-modal-backdrop" id="csvFormatModal" role="dialog" aria-modal="true" aria-labelledby="csvFormatTitle" hidden>
+  <div class="twp-modal twp-modal--wide">
+    <div class="twp-modal__head">
+      <span class="twp-modal__icon twp-modal__icon--info" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10 9 9 9 8 9"></polyline>
+        </svg>
+      </span>
+      <div>
+        <h2 class="twp-modal__title" id="csvFormatTitle">CSV Format Guide</h2>
+        <p class="twp-modal__sub">Upload your customer contact list in bulk</p>
+      </div>
+    </div>
+    
+    <div class="csv-modal__body">
+      <p class="csv-modal__desc">Your file should contain two columns: <b>Name</b> and <b>Phone</b>. Headers are optional.</p>
+      
+      <div class="csv-preview-card">
+        <div class="csv-preview-header">
+          <span>Expected CSV Columns</span>
+          <button type="button" class="csv-copy-btn" id="copyCsvTemplateBtn">Copy Template</button>
+        </div>
+        <div class="csv-preview-table">
+          <div class="csv-trow csv-thead">
+            <span>Name</span>
+            <span>Phone</span>
+          </div>
+          <div class="csv-trow">
+            <span>Rahul Sharma</span>
+            <span>9876543210</span>
+          </div>
+          <div class="csv-trow">
+            <span>Priya Patel</span>
+            <span>+91 9123456780</span>
+          </div>
+          <div class="csv-trow">
+            <span>Ananya Sen</span>
+            <span>9988776655</span>
+          </div>
+        </div>
+      </div>
+
+      <ul class="csv-rules-list">
+        <li><b>Columns:</b> Column 1 is customer name; Column 2 is WhatsApp mobile number.</li>
+        <li><b>Phone format:</b> 10-digit Indian numbers (starting with 6–9). Prefix <code>+91</code> or <code>91</code> is optional.</li>
+        <li><b>Delimiters:</b> Separated by comma (<code>,</code>), semicolon (<code>;</code>), or tab (<code>\t</code>).</li>
+        <li><b>Smart update:</b> Existing numbers are updated automatically without creating duplicates.</li>
+      </ul>
+    </div>
+
+    <div class="twp-modal__actions">
+      <button type="button" class="twp-btn twp-btn--ghost" id="csvFormatCloseBtn">Close</button>
+      <button type="button" class="twp-btn twp-btn--umber" id="downloadSampleCsvBtn">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download Sample CSV
+      </button>
+      <button type="button" class="twp-btn" id="modalImportCsvBtn">Upload CSV</button>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="/config.js"></script>
-<script src="/admin/admin.js"></script>
+<script src="/admin/admin.js?v=9"></script>
 </body>
 </html>

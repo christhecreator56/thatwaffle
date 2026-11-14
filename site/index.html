@@ -123,10 +123,18 @@
   <div class="wrap offers__grid">
     <div>
       <h2 class="lean" id="offers-title">catch that offer</h2>
-      <p class="lede">Follow us on Instagram so you don't miss the next one.</p>
+      <p class="lede">Offers drop first on WhatsApp. Be the first to grab weekend deals, secret flavors, and sweet surprises.</p>
       <p class="offers__cta"><a class="twp-btn" href="https://www.instagram.com/thatwaffleplace" target="_blank" rel="noopener">Follow on Instagram</a></p>
     </div>
-    <img class="offers__badge" src="assets/badge-waffle.svg" alt="" loading="lazy">
+    <form class="twp-form offers__form" id="optInForm" novalidate>
+      <h3 class="poster" style="color:var(--umber);margin:0 0 4px 0;font-size:26px;">Get that offer first</h3>
+      <p style="font-size:14px;line-height:20px;margin:0 0 8px 0;color:var(--ink-soft);">Nobody gets a WhatsApp message without saying yes.</p>
+      <div class="twp-field"><label for="optin-name">Your name</label><div class="twp-input"><input id="optin-name" name="name" autocomplete="name" required placeholder="Your name"></div></div>
+      <div class="twp-field"><label for="optin-phone">WhatsApp number</label><div class="twp-input"><span>+91</span><input id="optin-phone" name="phone" inputmode="numeric" autocomplete="tel-national" maxlength="10" placeholder="10-digit mobile number" required></div></div>
+      <label class="twp-check" for="optin-yes"><input id="optin-yes" type="checkbox" name="optedIn"><span>Yes, send me That Waffle Place offers on WhatsApp. I can reply STOP any time.</span></label>
+      <p class="twp-err" id="optin-err" role="alert"></p>
+      <button class="twp-btn" type="submit">Count me in</button>
+    </form>
   </div>
   <div class="wrap offers__list" id="offerList"></div>
 </section>

@@ -22,7 +22,7 @@ input[type=file]{font:inherit;font-size:15px;max-width:100%}
 .page section{display:grid;gap:var(--space-4)}
 .head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-3)}
 .split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3)}
-.row{display:flex;flex-wrap:wrap;gap:var(--space-3)}
+.row{display:flex;flex-wrap:wrap;gap:var(--space-3);align-items:center}
 .twp-btn{min-height:48px}
 
 .list{list-style:none;margin:0;padding:0;display:grid;gap:var(--space-3)}
@@ -30,15 +30,1429 @@ input[type=file]{font:inherit;font-size:15px;max-width:100%}
 .list img,.list .noimg{width:72px;height:72px;object-fit:cover;border-radius:var(--radius-sm);background:var(--lily)}
 .list b{display:block;font-family:var(--font-poster);font-weight:400;font-size:24px;letter-spacing:.03em;text-transform:uppercase;overflow-wrap:anywhere}
 .list small{display:block;font-size:14px;line-height:21px;color:var(--ink-soft);overflow-wrap:anywhere}
-.acts{display:flex;gap:var(--space-2)}
-.acts button{appearance:none;border:2px solid var(--dune);background:transparent;color:var(--dune);border-radius:var(--radius-pill);min-height:44px;padding:0 var(--space-3);font-weight:700;cursor:pointer}
+.acts{display:flex;gap:var(--space-2);flex-wrap:wrap}
+.acts button{appearance:none;border:2px solid var(--dune);background:transparent;color:var(--dune);border-radius:var(--radius-pill);min-height:40px;padding:0 var(--space-3);font-weight:700;cursor:pointer;font-size:14px}
+.acts button.acts__primary{background:var(--yamabuki);border-color:var(--dune)}
 .empty{padding:var(--space-4);text-align:center;color:var(--ink-soft)}
-.pill{display:inline-block;margin-right:6px;padding:0 10px;border-radius:var(--radius-pill);background:var(--lily);color:var(--dune);font-size:13px;font-weight:700}
+.pill{display:inline-block;margin-right:6px;padding:2px 10px;border-radius:var(--radius-pill);background:var(--lily);color:var(--dune);font-size:13px;font-weight:700}
 .pill--on{background:var(--seiji)}
+.pill--broadcast{background:#25d366;color:#0b4619}
+.pill--scheduled{background:var(--yamabuki);color:var(--dune)}
+.pill--failed{background:#e57373;color:#fff}
 .toast{position:fixed;z-index:20;left:50%;bottom:var(--space-4);transform:translateX(-50%);margin:0;padding:var(--space-2) var(--space-4);background:var(--dune);color:var(--justright);border-radius:var(--radius-pill);font-weight:700}
+
+/* WhatsApp Marketing Studio & Simulator */
+.wa-box {
+  margin: var(--space-4) 0;
+  padding: var(--space-4);
+  background: linear-gradient(135deg, rgba(37,211,102,.07) 0%, rgba(18,140,126,.1) 100%);
+  border: 3px solid var(--dune);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--sticker-md);
+}
+.wa-box .twp-check span {
+  font-size: 19px;
+  color: var(--dune);
+}
+.wa-details {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+.wa-time-field {
+  padding: var(--space-3);
+  background: var(--kinari);
+  border: 2px solid var(--dune);
+  border-radius: var(--radius-md);
+  box-shadow: var(--sticker-sm);
+}
+
+.wa-studio {
+  display: grid;
+  grid-template-columns: 345px minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+  width: 100%;
+}
+.wa-phone-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.wa-phone-header-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px 6px;
+  min-width: 0;
+  user-select: none;
+}
+.wa-phone-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: #075e54;
+  white-space: nowrap;
+}
+.wa-live-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 8px;
+  height: 8px;
+  flex: none;
+}
+.wa-live-indicator::before {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #25d366;
+  animation: waPulse 1.8s infinite cubic-bezier(0.4, 0, 0.6, 1);
+}
+.wa-live-indicator::after {
+  content: '';
+  position: relative;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #008069;
+}
+@keyframes waPulse {
+  0% { transform: scale(1); opacity: 0.9; }
+  70% { transform: scale(2.4); opacity: 0; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+.wa-preview__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #e8f7ee;
+  color: #065e28;
+  border: 1.5px solid #25d366;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex: none;
+  box-shadow: 0 1px 3px rgba(37,211,102,0.18);
+}
+.wa-badge-icon {
+  flex: none;
+  color: #075e54;
+}
+
+/* Smartphone Device Mockup */
+.wa-phone {
+  background: #111b21;
+  border: 7px solid #1a1a1a;
+  border-radius: 36px;
+  box-shadow: 0 18px 45px -10px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.08);
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 335px;
+  margin: 0 auto;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+.wa-phone__notch {
+  background: #008069;
+  color: rgba(255,255,255,0.95);
+  padding: 8px 18px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  font-weight: 700;
+  user-select: none;
+  letter-spacing: -0.01em;
+}
+.wa-phone__time {
+  font-weight: 700;
+}
+.wa-phone__speaker {
+  width: 48px;
+  height: 4px;
+  background: rgba(0,0,0,0.28);
+  border-radius: 2px;
+}
+.wa-phone__icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* WhatsApp Business Header */
+.wa-appbar {
+  background: #008069;
+  color: #fff;
+  padding: 6px 10px 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  user-select: none;
+}
+.wa-appbar__back {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  opacity: 0.95;
+  padding: 2px;
+}
+.wa-appbar__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #ffffff;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.wa-appbar__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.wa-appbar__info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0;
+}
+.wa-appbar__name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.wa-verified {
+  flex: none;
+}
+.wa-appbar__status {
+  font-size: 10.5px;
+  color: rgba(255,255,255,0.88);
+  white-space: nowrap;
+}
+.wa-appbar__actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  opacity: 0.95;
+}
+
+/* WhatsApp Chat Wallpaper & Stage */
+.wa-chat {
+  background-color: #efeae2;
+  background-image: 
+    radial-gradient(circle at 10px 10px, rgba(0,0,0,0.04) 1px, transparent 1px),
+    radial-gradient(circle at 25px 25px, rgba(0,0,0,0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+  padding: 12px 10px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 480px;
+}
+.wa-chat__date {
+  align-self: center;
+  background: rgba(255,255,255,0.95);
+  border-radius: 6px;
+  padding: 3px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #54656f;
+  box-shadow: 0 1px 0.5px rgba(11,20,26,.13);
+  letter-spacing: .04em;
+  user-select: none;
+}
+.wa-chat__enc {
+  background: #ffeecd;
+  color: #54656f;
+  border-radius: 7.5px;
+  padding: 6px 12px;
+  font-size: 11px;
+  line-height: 14.5px;
+  text-align: center;
+  box-shadow: 0 1px 0.5px rgba(11,20,26,.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Incoming WhatsApp Message Bubble */
+.wa-bubble {
+  background: #ffffff;
+  border-radius: 0 10px 10px 10px;
+  box-shadow: 0 1px 1.5px rgba(11,20,26,.16);
+  position: relative;
+  overflow: hidden;
+  color: #111b21;
+  font-size: 14px;
+  line-height: 19px;
+  margin-left: 8px;
+  max-width: 100%;
+}
+.wa-bubble__tail {
+  position: absolute;
+  top: 0;
+  left: -8px;
+  z-index: 2;
+}
+
+/* Full Bleed Realistic Header Image */
+.wa-bubble__img {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  max-height: 230px;
+  background: #dfe5e7;
+  padding: 0;
+  margin: 0;
+  overflow: hidden;
+  position: relative;
+  display: block;
+  border-top-right-radius: 10px;
+}
+.wa-bubble__img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  border-radius: 0;
+  filter: none;
+  transition: opacity .2s ease;
+}
+.wa-bubble__img.is-default-badge {
+  background: linear-gradient(135deg, #2e2c25 0%, #4a211e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+.wa-bubble__img.is-default-badge img {
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,0.35));
+}
+
+/* WhatsApp Message Content */
+.wa-bubble__body {
+  padding: 10px 12px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13.5px;
+  line-height: 19px;
+}
+.wa-msg-greeting {
+  margin: 0;
+  color: #111b21;
+  font-size: 13.5px;
+  line-height: 19px;
+}
+.wa-msg-greeting strong {
+  font-weight: 700;
+  color: #111b21;
+}
+
+/* Authentic WhatsApp Blockquote Highlight */
+.wa-msg-quote {
+  border-left: 3.5px solid #25d366;
+  background: rgba(37,211,102,0.06);
+  padding: 8px 10px;
+  border-radius: 0 6px 6px 0;
+  display: grid;
+  gap: 4px;
+  margin: 4px 0;
+}
+.wa-msg-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.wa-msg-fire {
+  font-size: 14px;
+}
+.wa-msg-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #111b21;
+  letter-spacing: .01em;
+}
+.wa-msg-disc-row {
+  font-size: 13.5px;
+  color: #111b21;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.wa-msg-badge-tag {
+  background: #25d366;
+  color: #054618;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+.wa-msg-disc {
+  color: #0b8043;
+  font-weight: 700;
+}
+.wa-msg-dates-row, .wa-msg-terms-row {
+  font-size: 12px;
+  color: #54656f;
+  line-height: 16px;
+  display: flex;
+  gap: 4px;
+}
+.wa-msg-label {
+  font-weight: 600;
+  color: #40505a;
+  flex: none;
+}
+.wa-msg-cta-hint {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: #54656f;
+  line-height: 17px;
+}
+
+/* Footer & Delivery Status */
+.wa-bubble__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 4px;
+  padding-top: 2px;
+}
+.wa-bubble__subnote {
+  font-size: 11px;
+  color: #8696a0;
+  font-style: italic;
+}
+.wa-bubble__time {
+  font-size: 11px;
+  color: #667781;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-weight: 600;
+  flex: none;
+}
+.wa-bubble__ticks {
+  color: #53bdeb;
+}
+
+/* Authentic WhatsApp Action Buttons (Full-Width Stacked) */
+.wa-bubble__actions {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid #e9edef;
+  background: #ffffff;
+}
+.wa-action-btn {
+  padding: 10px 12px;
+  min-height: 42px;
+  color: #00a884;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-weight: 600;
+  font-size: 13.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  border-bottom: 1px solid #e9edef;
+  user-select: none;
+  transition: background .15s ease;
+}
+.wa-action-btn:last-child {
+  border-bottom: 0;
+}
+.wa-action-btn:hover {
+  background: #f0fdf9;
+  color: #008069;
+}
+.wa-action-icon {
+  flex: none;
+}
+
+/* Phone bottom bar */
+.wa-phone__bottom {
+  background: #efeae2;
+  padding: 6px 0;
+}
+.wa-phone__home-bar {
+  width: 120px;
+  height: 4px;
+  background: rgba(0,0,0,0.22);
+  border-radius: 2px;
+  margin: 0 auto;
+}
+.wa-action-icon {
+  font-size: 14px;
+}
+
+/* Right Companion Info Column */
+.wa-info-col {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.wa-card {
+  background: var(--kinari);
+  border: 2px solid var(--dune);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  box-shadow: var(--sticker-sm);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.wa-card__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.wa-card__title h3 {
+  margin: 0;
+  font-family: var(--font-poster);
+  font-size: 20px;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  color: var(--umber);
+}
+.wa-card__desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--ink-soft);
+}
+.wa-card__specs {
+  display: grid;
+  gap: 6px;
+  margin-top: 4px;
+}
+.wa-spec-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(46,44,37,0.15);
+  font-size: 13px;
+}
+.wa-spec-item:last-child {
+  border-bottom: 0;
+}
+.wa-spec-lbl {
+  font-weight: 700;
+  color: var(--dune);
+}
+.wa-spec-val {
+  color: var(--umber);
+  font-weight: 700;
+}
+.wa-tokens-list {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 22px;
+}
+.wa-tokens-list code {
+  background: #efeae2;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  color: #075e54;
+}
+
+/* Instant Test Card */
+.wa-test-card {
+  border-color: #128c7e;
+  background: rgba(37,211,102,.07);
+}
+.wa-test__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-top: 4px;
+  min-width: 0;
+  max-width: 100%;
+}
+.wa-test__row .twp-input {
+  flex: 1 1 140px;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  background: var(--kinari);
+}
+.wa-test__row .twp-input span {
+  padding-left: 12px;
+  font-size: 14px;
+}
+.wa-test__row .twp-input input {
+  width: 100%;
+  min-width: 0;
+  font-size: 14px;
+  min-height: 44px;
+  padding: 0 10px;
+}
+.wa-test__row .twp-btn {
+  flex-shrink: 0;
+  min-height: 44px;
+  font-size: 15px;
+  padding: 0 14px;
+  white-space: nowrap;
+  letter-spacing: .02em;
+}
+#testMsg {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.45;
+}
+
+@media (max-width: 880px) {
+  .wa-studio {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+}
+
+@media (max-width: 768px) {
+  /* Prevent horizontal scroll */
+  body, html {
+    overflow-x: hidden;
+    width: 100%;
+  }
+
+  /* Sticky Top Bar on Mobile */
+  .top {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    row-gap: 8px;
+    padding: 8px 12px;
+  }
+  .top .top__site {
+    grid-column: 1;
+    font-size: 15px;
+    min-height: 36px;
+    padding: 0 10px;
+    justify-self: start;
+  }
+  .top .top__out {
+    grid-column: 2;
+    font-size: 14px;
+    min-height: 36px;
+    padding: 0 10px;
+    justify-self: end;
+  }
+  .top nav {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+    width: 100%;
+  }
+  .top nav::-webkit-scrollbar {
+    display: none;
+  }
+  .top .tab {
+    font-size: 15px;
+    min-height: 36px;
+    padding: 0 12px;
+    white-space: nowrap;
+    flex: none;
+  }
+
+  /* Page Padding & Typography */
+  .page {
+    padding: 16px 12px 36px;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  .page section {
+    gap: 16px;
+  }
+  h1 {
+    font-size: 42px;
+    line-height: 0.95;
+  }
+  .head {
+    gap: 8px;
+  }
+
+  /* Forms & Box Containers */
+  .twp-form {
+    padding: 16px 12px;
+    border-radius: 16px;
+    box-shadow: var(--sticker-md);
+    max-width: 100%;
+    min-width: 0;
+  }
+  .split {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .row {
+    gap: 8px;
+  }
+  .row .twp-btn {
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+    justify-content: center;
+  }
+
+  /* WhatsApp Studio on Mobile */
+  .wa-box {
+    margin: 12px 0;
+    padding: 12px 8px;
+    border-radius: 14px;
+    border-width: 2px;
+  }
+  .wa-studio {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    width: 100%;
+  }
+  .wa-phone-wrap {
+    width: 100%;
+    max-width: 100%;
+  }
+  .wa-phone-header-label {
+    padding: 0 2px 6px;
+  }
+  .wa-phone-title {
+    font-size: 12px;
+  }
+  .wa-preview__badge {
+    font-size: 10px;
+    padding: 2px 7px;
+  }
+
+  /* Smartphone Device Mockup Responsive */
+  .wa-phone {
+    width: 100%;
+    max-width: 100%;
+    border-width: 5px;
+    border-radius: 26px;
+    box-shadow: 0 10px 24px -6px rgba(0,0,0,0.35);
+  }
+  .wa-phone__notch {
+    padding: 6px 12px 3px;
+    font-size: 11px;
+  }
+  .wa-phone__speaker {
+    width: 36px;
+    height: 3px;
+  }
+  .wa-appbar {
+    padding: 6px 8px 8px;
+  }
+  .wa-appbar__name {
+    font-size: 13px;
+  }
+  .wa-appbar__status {
+    font-size: 10px;
+  }
+  .wa-chat {
+    padding: 10px 8px 14px;
+    min-height: 400px;
+  }
+  .wa-bubble {
+    margin-left: 6px;
+    max-width: 100%;
+  }
+  .wa-bubble__body {
+    padding: 8px 10px 6px;
+    font-size: 13px;
+  }
+  .wa-msg-quote {
+    padding: 6px 8px;
+  }
+  .wa-msg-title {
+    font-size: 13.5px;
+  }
+  .wa-action-btn {
+    min-height: 38px;
+    font-size: 13px;
+    padding: 8px;
+  }
+
+  /* Companion Cards & Instant Test Box */
+  .wa-info-col {
+    width: 100%;
+    min-width: 0;
+  }
+  .wa-card {
+    padding: 14px 12px;
+    border-radius: 12px;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .wa-card__title h3 {
+    font-size: 18px;
+  }
+  .wa-test__row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+  }
+  .wa-test__row .twp-input {
+    width: 100%;
+    min-width: 0;
+  }
+  .wa-test__row .twp-btn {
+    width: 100%;
+    min-height: 44px;
+    justify-content: center;
+    text-align: center;
+  }
+  .wa-spec-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+}
+
+@media (max-width: 420px) {
+  .wa-phone-header-label {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}
+
+/* Customers Stats Cards */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-3)}
+.stat-card{background:var(--kinari);border:2px solid var(--dune);border-radius:var(--radius-md);padding:var(--space-3);box-shadow:var(--sticker-sm);display:flex;flex-direction:column;gap:4px}
+.stat-card__val{font-family:var(--font-poster);font-size:36px;line-height:1;color:var(--umber)}
+.stat-card__lbl{font-size:13px;color:var(--ink-soft);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+
+/* Custom Enhanced Brand Dropdowns */
+.twp-dropdown {
+  position: relative;
+  width: 100%;
+}
+.twp-dropdown__btn {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  background: var(--justright);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+  outline: none;
+  transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease, transform .15s ease;
+  user-select: none;
+}
+.twp-dropdown__btn:hover {
+  background: #f7e2cf;
+  border-color: var(--dune);
+  box-shadow: var(--sticker-sm);
+  transform: translateY(-1px);
+}
+.twp-dropdown__btn:focus-visible,
+.twp-dropdown__btn[aria-expanded="true"] {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-color: var(--dune);
+  background: var(--kinari);
+  box-shadow: var(--sticker-sm);
+}
+.twp-dropdown__selected {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.twp-dropdown__arrow {
+  flex: none;
+  color: var(--dune);
+  transition: transform .22s cubic-bezier(.3,1.5,.5,1), color .15s ease;
+}
+.twp-dropdown__btn[aria-expanded="true"] .twp-dropdown__arrow {
+  transform: rotate(180deg);
+  color: var(--umber);
+}
+
+.twp-dropdown__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 100;
+  list-style: none;
+  margin: 0;
+  padding: 8px;
+  background: var(--kinari);
+  border: 3px solid var(--dune);
+  border-radius: var(--radius-md);
+  box-shadow: var(--sticker-md);
+  display: grid;
+  gap: 4px;
+  max-height: 260px;
+  overflow-y: auto;
+  animation: twpDropdownIn .16s cubic-bezier(.2,1.3,.4,1);
+}
+@keyframes twpDropdownIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.twp-dropdown__opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all .12s ease;
+  user-select: none;
+}
+.twp-dropdown__opt:hover,
+.twp-dropdown__opt:focus {
+  background: var(--yamabuki);
+  color: var(--dune);
+  border-color: var(--dune);
+  box-shadow: 2px 2px 0 var(--dune);
+  transform: translateX(2px);
+}
+.twp-dropdown__opt.is-selected {
+  background: rgba(248, 181, 0, 0.22);
+  border-color: rgba(138, 40, 35, 0.4);
+  color: var(--umber);
+}
+.twp-dropdown__opt.is-selected:hover {
+  background: var(--yamabuki);
+  border-color: var(--dune);
+  color: var(--dune);
+}
+.twp-dropdown__opt-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.twp-dropdown__check {
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--umber);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity .15s ease, transform .15s ease;
+  flex: none;
+}
+.twp-dropdown__opt.is-selected .twp-dropdown__check {
+  opacity: 1;
+  transform: scale(1);
+}
+.twp-dropdown__opt:hover .twp-dropdown__check {
+  color: var(--dune);
+}
+
+/* Vector Option Icons */
+.twp-opt-icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: var(--umber);
+  transition: transform .15s ease, color .15s ease;
+}
+.twp-dropdown__opt:hover .twp-opt-icon {
+  color: var(--dune);
+  transform: scale(1.1);
+}
+.twp-dropdown__opt.is-selected .twp-opt-icon {
+  color: var(--umber);
+}
+.twp-dropdown__opt.is-selected:hover .twp-opt-icon {
+  color: var(--dune);
+}
+.twp-dropdown__selected .twp-opt-icon {
+  color: var(--umber);
+  flex: none;
+}
+
+.scene-dot {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--dune);
+  vertical-align: middle;
+  flex: none;
+  box-shadow: 1px 1px 0 rgba(46,44,37,.4);
+}
 
 @media (max-width:560px){
   .list li{grid-template-columns:56px minmax(0,1fr)}
   .list img,.list .noimg{width:56px;height:56px}
   .acts{grid-column:1/-1}
+  .wa-bubble{max-width:100%}
+  .stat-grid{grid-template-columns:1fr}
+}
+
+/* Custom Interactive File Upload Component */
+.twp-uploader {
+  width: 100%;
+  position: relative;
+}
+.twp-uploader__dropzone {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background: var(--kinari);
+  border: 2.5px dashed var(--dune);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  box-shadow: var(--sticker-sm);
+  transition: all .2s ease;
+  user-select: none;
+}
+.twp-uploader__dropzone:hover,
+.twp-uploader__dropzone:focus-visible,
+.twp-uploader__dropzone.is-dragover {
+  border-color: var(--yamabuki);
+  background: #fffdf5;
+  box-shadow: 0 0 0 3px rgba(248,181,0,0.3);
+  transform: translateY(-1px);
+  outline: none;
+}
+.twp-uploader__icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: rgba(248,181,0,0.25);
+  border: 2px solid var(--dune);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--umber);
+  flex: none;
+  transition: transform .15s ease;
+}
+.twp-uploader__dropzone:hover .twp-uploader__icon {
+  transform: scale(1.08);
+}
+.twp-uploader__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.twp-uploader__title {
+  font-size: 15px;
+  color: var(--dune);
+  letter-spacing: .01em;
+}
+.twp-uploader__title b {
+  color: var(--umber);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.twp-uploader__hint {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+/* Preview Card */
+.twp-uploader__preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  background: var(--kinari);
+  border: 2.5px solid var(--dune);
+  border-radius: var(--radius-md);
+  box-shadow: var(--sticker-sm);
+  transition: all .2s ease;
+}
+.twp-uploader__thumb-box {
+  position: relative;
+  width: 70px;
+  height: 70px;
+  flex: none;
+}
+.twp-uploader__thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 2px solid var(--dune);
+  background: var(--lily);
+  display: block;
+}
+.twp-uploader__badge {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #25d366;
+  color: #075e54;
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 1.5px 7px;
+  border-radius: var(--radius-pill);
+  border: 1.5px solid var(--dune);
+  white-space: nowrap;
+  letter-spacing: .02em;
+  box-shadow: 1px 1px 0 var(--dune);
+}
+.twp-uploader__badge.is-existing {
+  background: var(--yamabuki);
+  color: var(--dune);
+}
+.twp-uploader__meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.twp-uploader__file-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.twp-uploader__name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--dune);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.twp-uploader__size {
+  font-size: 12px;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+.twp-uploader__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.twp-uploader__btn {
+  appearance: none;
+  border: 2px solid var(--dune);
+  background: var(--yamabuki);
+  color: var(--dune);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all .15s ease;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+}
+.twp-uploader__btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 1px 1px 0 var(--dune);
+}
+.twp-uploader__btn--danger {
+  background: #ffebee;
+  color: #c62828;
+  border-color: #c62828;
+}
+.twp-uploader__btn--danger:hover {
+  background: #ffcdd2;
+}
+
+@media (max-width: 480px) {
+  .twp-uploader__dropzone {
+    padding: 12px;
+    gap: 10px;
+  }
+  .twp-uploader__icon {
+    width: 38px;
+    height: 38px;
+  }
+  .twp-uploader__title {
+    font-size: 14px;
+  }
+  .twp-uploader__preview {
+    padding: 10px;
+    gap: 10px;
+  }
+  .twp-uploader__thumb-box {
+    width: 58px;
+    height: 58px;
+  }
+}
+
+/* Floating Confirmation Dialog */
+.twp-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(46, 44, 37, 0.56);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.twp-modal-backdrop[hidden] {
+  display: none !important;
+}
+.twp-modal {
+  width: 100%;
+  max-width: 420px;
+  background: var(--kinari);
+  border: 3px solid var(--dune);
+  border-radius: 20px;
+  padding: 22px;
+  box-shadow: 6px 6px 0 var(--dune);
+  animation: twpModalPop .16s ease-out;
+}
+@keyframes twpModalPop {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+.twp-modal__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.twp-modal__icon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  border: 2px solid var(--dune);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+.twp-modal-backdrop.is-wa .twp-modal__icon {
+  background: #dcfce7;
+  color: #075e54;
+}
+.twp-modal__title {
+  margin: 0;
+  font-family: var(--font-poster);
+  font-size: 24px;
+  line-height: 1.15;
+  color: var(--umber);
+  overflow-wrap: anywhere;
+}
+.twp-modal__desc {
+  margin: 12px 0 18px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  overflow-wrap: anywhere;
+}
+.twp-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.twp-modal__confirm--danger {
+  background: #c62828;
+  color: #fff;
+}
+.twp-modal__confirm--danger:hover {
+  background: #b71c1c;
+}
+.twp-modal__confirm--wa {
+  background: #25d366;
+  color: #0b4619;
+}
+.twp-modal__confirm--wa:hover {
+  background: #1ebe5d;
+}
+.twp-btn--wa {
+  background: #25d366;
+  color: #0b4619;
+  border-color: var(--dune);
+}
+.twp-btn--wa:hover {
+  background: #1ebe5d;
+}
+.twp-modal--wide {
+  max-width: 520px;
+}
+.twp-modal__icon--info {
+  background: #fef3c7;
+  color: #92400e;
+}
+.twp-modal__sub {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink-soft);
+}
+.csv-modal__body {
+  margin: 14px 0 18px;
+  display: grid;
+  gap: 12px;
+}
+.csv-modal__desc {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--ink);
+}
+.csv-preview-card {
+  background: #ffffff;
+  border: 2px solid var(--dune);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 2px 2px 0 var(--dune);
+}
+.csv-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 12px;
+  background: #efeae2;
+  border-bottom: 1.5px solid var(--dune);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--dune);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+.csv-copy-btn {
+  appearance: none;
+  background: transparent;
+  border: 1.5px solid var(--dune);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--dune);
+  cursor: pointer;
+  transition: background .12s ease;
+}
+.csv-copy-btn:hover {
+  background: var(--kinari);
+}
+.csv-preview-table {
+  font-family: monospace, sans-serif;
+  font-size: 13px;
+}
+.csv-trow {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  padding: 6px 12px;
+  border-bottom: 1px dashed rgba(46,44,37,0.15);
+}
+.csv-trow:last-child {
+  border-bottom: 0;
+}
+.csv-thead {
+  background: rgba(46,44,37,0.05);
+  font-weight: 700;
+  color: var(--umber);
+  border-bottom: 1.5px solid var(--dune);
+}
+.csv-rules-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--ink-soft);
+  display: grid;
+  gap: 4px;
+}
+.csv-rules-list code {
+  background: #efeae2;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-weight: 700;
+  color: var(--umber);
+}
+
+@media (max-width: 420px) {
+  .twp-modal { padding: 18px 16px; }
+  .twp-modal__actions { flex-direction: column-reverse; }
+  .twp-modal__actions .twp-btn { width: 100%; justify-content: center; }
+}
+
+/* Inline field validation */
+.twp-input.is-invalid {
+  border-color: #c62828 !important;
+  box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.16);
+}
+.twp-field-err {
+  color: #b91c1c;
+  font-size: 13px;
+  font-weight: 700;
+  margin: -4px 0 0;
+}
+.wa-msg-dates-row.is-invalid {
+  color: #b91c1c;
+  font-weight: 700;
 }
