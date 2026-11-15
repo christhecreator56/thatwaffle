@@ -1925,3 +1925,243 @@ input[type=file]{font:inherit;font-size:15px;max-width:100%}
   color: #b91c1c;
   font-weight: 700;
 }
+
+/* =========================================================
+   TWP BRAND LOADING & SKELETON ANIMATION SYSTEM
+   ========================================================= */
+
+/* Shimmer Keyframe */
+@keyframes twpShimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Waffle Bob & Spin Keyframes */
+@keyframes twpWaffleBake {
+  0% { transform: scale(0.92) rotate(-5deg); }
+  50% { transform: scale(1.08) rotate(5deg); }
+  100% { transform: scale(0.92) rotate(-5deg); }
+}
+
+@keyframes twpSpin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes actionWaffleSpin {
+  0% { transform: rotate(0deg) scale(0.95); }
+  25% { transform: rotate(-8deg) scale(1.08); }
+  50% { transform: rotate(0deg) scale(1.0); }
+  75% { transform: rotate(8deg) scale(1.08); }
+  100% { transform: rotate(0deg) scale(0.95); }
+}
+
+@keyframes loaderBarGlide {
+  0% { left: -40%; width: 30%; }
+  50% { width: 55%; }
+  100% { left: 100%; width: 30%; }
+}
+
+/* 1. Page / Tab List Loader Header */
+.list li.twp-list-loader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: #fffdfa;
+  border: 2px dashed rgba(63, 41, 18, 0.4);
+  border-radius: var(--radius-md);
+  box-shadow: 2px 2px 0 rgba(46, 44, 37, 0.08);
+  grid-template-columns: auto 1fr;
+  animation: fadeIn 0.18s ease-out;
+}
+.twp-waffle-spinner-wrap {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: twpWaffleBake 1.3s ease-in-out infinite alternate;
+}
+.twp-list-loader__info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.twp-list-loader__title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--dune);
+  font-family: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.twp-list-loader__desc {
+  font-size: 12.5px;
+  color: #715545;
+  font-weight: 600;
+}
+
+/* 2. List Skeleton Item */
+.list li.twp-skeleton-li {
+  position: relative;
+  overflow: hidden;
+  pointer-events: none;
+  background: #fffdfa;
+  border: 2px solid rgba(46, 44, 37, 0.18);
+  box-shadow: 2px 2px 0 rgba(46, 44, 37, 0.05);
+}
+.twp-sk-thumb {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--radius-sm);
+  background: #f1ebd8;
+  border: 1.5px dashed rgba(46, 44, 37, 0.2);
+}
+.twp-sk-text {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+.twp-sk-line {
+  height: 14px;
+  border-radius: 6px;
+  background: #f1ebd8;
+}
+.twp-sk-title {
+  width: 42%;
+  height: 20px;
+}
+.twp-sk-sub {
+  width: 68%;
+}
+.twp-sk-acts {
+  display: flex;
+  gap: var(--space-2);
+}
+.twp-sk-btn {
+  width: 64px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+  background: #f1ebd8;
+}
+
+/* Shimmer overlay wave */
+.twp-skeleton-li::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.75) 50%, transparent 100%);
+  animation: twpShimmer 1.5s infinite;
+}
+
+/* 3. Row Action State Animations */
+.list li.is-deleting {
+  pointer-events: none;
+  opacity: 0.6;
+  background: #fee2e2 !important;
+  border-color: #ef4444 !important;
+  transform: scale(0.98);
+  transition: all 0.25s ease;
+}
+.list li.is-updating {
+  pointer-events: none;
+  opacity: 0.75;
+  transition: all 0.2s ease;
+}
+
+/* 4. Inline Button Spinner */
+.twp-btn-spinner {
+  display: inline-block;
+  width: 15px;
+  height: 15px;
+  border: 2.4px solid currentColor;
+  border-right-color: transparent !important;
+  border-radius: 50%;
+  animation: twpSpin 0.65s linear infinite;
+  vertical-align: middle;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+.twp-btn.is-loading {
+  pointer-events: none;
+  opacity: 0.85;
+  cursor: wait;
+}
+
+/* 5. Global Action Loader Overlay */
+.twp-action-loader-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(46, 44, 37, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  animation: fadeIn 0.16s ease-out;
+}
+.twp-action-loader-backdrop[hidden] {
+  display: none !important;
+}
+.twp-action-loader-card {
+  background: #fffdfa;
+  border: 3.5px solid var(--dune);
+  border-radius: var(--radius-lg);
+  box-shadow: 6px 6px 0 var(--dune);
+  padding: 34px 28px;
+  width: min(100%, 420px);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  animation: popIn 0.22s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.twp-action-waffle {
+  width: 72px;
+  height: 72px;
+  animation: actionWaffleSpin 2.4s ease-in-out infinite;
+}
+.twp-action-loader__text {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.twp-action-loader__heading {
+  margin: 0;
+  font-family: var(--font-poster);
+  font-size: 24px;
+  letter-spacing: 0.02em;
+  color: var(--dune);
+  text-transform: uppercase;
+}
+.twp-action-loader__sub {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  line-height: 1.45;
+}
+.twp-action-loader__bar {
+  width: 100%;
+  height: 8px;
+  background: #f1ebd8;
+  border: 1.5px solid var(--dune);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  position: relative;
+  margin-top: 4px;
+}
+.twp-action-loader__bar-fill {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 40%;
+  background: var(--yamabuki);
+  border-radius: var(--radius-pill);
+  animation: loaderBarGlide 1.3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}

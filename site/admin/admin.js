@@ -59,6 +59,85 @@
   }
   function must(r) { if (r.error) throw r.error; return r.data; }
 
+  /* TWP Brand Loading & Skeleton Animation System */
+  function showActionLoader(title, subtitle) {
+    var ldr = $('actionLoader');
+    if (!ldr) return;
+    var h = $('actionLoaderHeading');
+    var s = $('actionLoaderSub');
+    if (h) h.textContent = title || 'Saving changes...';
+    if (s) s.textContent = subtitle || 'Please wait a moment while we update your store.';
+    ldr.hidden = false;
+  }
+
+  function hideActionLoader() {
+    var ldr = $('actionLoader');
+    if (ldr) ldr.hidden = true;
+  }
+
+  function setButtonLoading(btn, loading, text) {
+    if (!btn) return;
+    if (loading) {
+      if (!btn.dataset.origHtml) btn.dataset.origHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.classList.add('is-loading');
+      btn.innerHTML = '<span class="twp-btn-spinner" aria-hidden="true"></span> ' + (text || 'Please wait...');
+    } else {
+      btn.disabled = false;
+      btn.classList.remove('is-loading');
+      if (btn.dataset.origHtml) {
+        btn.innerHTML = btn.dataset.origHtml;
+        delete btn.dataset.origHtml;
+      }
+    }
+  }
+
+  function showListSkeleton(listId, type, message) {
+    var list = $(listId);
+    if (!list) return;
+    list.innerHTML = '';
+
+    // Loader Header with Animated Waffle SVG
+    var ldr = document.createElement('li');
+    ldr.className = 'twp-list-loader';
+    ldr.innerHTML = 
+      '<div class="twp-waffle-spinner-wrap" aria-hidden="true">' +
+        '<svg viewBox="0 0 100 100" width="46" height="46">' +
+          '<rect x="10" y="10" width="80" height="80" rx="16" fill="#f7c368" stroke="#3f2912" stroke-width="6"/>' +
+          '<line x1="37" y1="13" x2="37" y2="87" stroke="#3f2912" stroke-width="5" stroke-linecap="round"/>' +
+          '<line x1="63" y1="13" x2="63" y2="87" stroke="#3f2912" stroke-width="5" stroke-linecap="round"/>' +
+          '<line x1="13" y1="37" x2="87" y2="37" stroke="#3f2912" stroke-width="5" stroke-linecap="round"/>' +
+          '<line x1="13" y1="63" x2="87" y2="63" stroke="#3f2912" stroke-width="5" stroke-linecap="round"/>' +
+          '<rect x="42" y="42" width="16" height="16" rx="4" fill="#fff3b0" stroke="#3f2912" stroke-width="3"/>' +
+        '</svg>' +
+      '</div>' +
+      '<div class="twp-list-loader__info">' +
+        '<b class="twp-list-loader__title">' + (message || 'Loading...') + '</b>' +
+        '<small class="twp-list-loader__desc">Baking fresh updates from your database...</small>' +
+      '</div>';
+    list.appendChild(ldr);
+
+    // 3 Shimmer Skeleton Cards matching .list li grid
+    for (var i = 0; i < 3; i++) {
+      var sk = document.createElement('li');
+      sk.className = 'twp-skeleton-li';
+      var thumbHtml = type === 'customers' ? 
+        '<div class="twp-sk-thumb" style="border-radius:var(--radius-pill);width:48px;height:48px;" aria-hidden="true"></div>' : 
+        '<div class="twp-sk-thumb" aria-hidden="true"></div>';
+      sk.innerHTML = 
+        thumbHtml +
+        '<div class="twp-sk-text" aria-hidden="true">' +
+          '<div class="twp-sk-line twp-sk-title" style="width:' + (i === 1 ? '55%' : (i === 2 ? '38%' : '45%')) + '"></div>' +
+          '<div class="twp-sk-line twp-sk-sub" style="width:' + (i === 1 ? '75%' : '65%') + '"></div>' +
+        '</div>' +
+        '<div class="twp-sk-acts" aria-hidden="true">' +
+          '<div class="twp-sk-btn"></div>' +
+          '<div class="twp-sk-btn"></div>' +
+        '</div>';
+      list.appendChild(sk);
+    }
+  }
+
   /* Views & Navigation */
   function show(view) {
     $('loginView').hidden = view !== 'login';
@@ -74,7 +153,14 @@
     });
   }
   [].forEach.call(document.querySelectorAll('.tab'), function (b) {
-    b.addEventListener('click', function () { tab(b.dataset.tab); });
+    b.addEventListener('click', function () {
+      var t = b.dataset.tab;
+      tab(t);
+      if (t === 'offers') loadOffers();
+      else if (t === 'menu') loadItems();
+      else if (t === 'customers') loadCustomers();
+      else if (t === 'hours') loadHours();
+    });
   });
   [].forEach.call(document.querySelectorAll('[data-cancel]'), function (b) {
     b.addEventListener('click', function () { $(b.dataset.cancel).hidden = true; });
@@ -416,11 +502,16 @@
       tone: 'danger'
     }).then(function (ok) {
       if (!ok) return;
+      showActionLoader('Deleting ' + name + '...', 'Removing record from database...');
       db.from(table).delete().eq('id', id).then(function (r) {
         must(r);
         toast('Deleted ' + name);
         return reload();
-      }).catch(function (e) { toast(say(e)); });
+      }).catch(function (e) {
+        toast(say(e));
+      }).finally(function () {
+        hideActionLoader();
+      });
     });
   }
 
@@ -495,6 +586,7 @@
   }
 
   function loadOffers() {
+    showListSkeleton('offerList', 'offers', 'Loading offers & WhatsApp broadcasts...');
     return Promise.all([
       db.from('offers').select('*').order('ends_on', { ascending: false }),
       db.from('broadcasts').select('*')
@@ -503,7 +595,10 @@
       broadcasts = must(results[1]) || [];
       $('countBroadcasts').textContent = broadcasts.length;
       drawOffers();
-    }).catch(function (e) { toast(say(e)); });
+    }).catch(function (e) {
+      toast(say(e));
+      $('offerList').innerHTML = '<li class="empty">' + say(e) + '</li>';
+    });
   }
 
   /* WhatsApp Preview Synchronizer */
@@ -1109,7 +1204,7 @@
       tone: 'wa'
     }).then(function (ok) {
       if (!ok) return;
-      toast('Dispatching WhatsApp broadcast...');
+      showActionLoader('Dispatching WhatsApp broadcast...', 'Broadcasting "' + offerName + '" to your customer subscribers...');
       fetch('/api/dispatch-broadcast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1120,6 +1215,8 @@
         loadOffers();
       }).catch(function (e) {
         toast('Broadcast error: ' + e.message);
+      }).finally(function () {
+        hideActionLoader();
       });
     });
   }
@@ -1210,15 +1307,15 @@
     var executeSave = function () {
       var saveBtn = $('saveOfferBtn');
       var sendNowBtn = $('saveAndSendNowBtn');
-      if (saveBtn) saveBtn.disabled = true;
-      if (sendNowBtn) sendNowBtn.disabled = true;
-
       var fileToUpload = posterUploader.getFile();
-      if (saveBtn && !sendImmediately) {
-        saveBtn.textContent = fileToUpload ? 'Uploading poster...' : (doBroadcast ? 'Scheduling...' : 'Saving offer...');
-      }
-      if (sendNowBtn && sendImmediately) {
-        sendNowBtn.textContent = fileToUpload ? 'Uploading poster...' : 'Sending...';
+
+      if (sendImmediately) {
+        setButtonLoading(sendNowBtn, true, 'Sending broadcast...');
+        showActionLoader('Sending WhatsApp broadcast...', 'Saving offer and broadcasting to ' + audienceStr + ' via Meta API...');
+      } else {
+        var actionLabel = doBroadcast ? 'Scheduling...' : 'Saving offer...';
+        setButtonLoading(saveBtn, true, actionLabel);
+        showActionLoader(doBroadcast ? 'Scheduling broadcast...' : 'Saving offer...', fileToUpload ? 'Uploading poster and saving offer...' : 'Saving offer details to database...');
       }
 
       upload(fileToUpload, 'posters').then(function (url) {
@@ -1304,8 +1401,9 @@
       }).catch(function (e) {
         msg.textContent = say(e);
       }).finally(function () {
-        if (saveBtn) saveBtn.disabled = false;
-        if (sendNowBtn) sendNowBtn.disabled = false;
+        hideActionLoader();
+        if (saveBtn) setButtonLoading(saveBtn, false);
+        if (sendNowBtn) setButtonLoading(sendNowBtn, false);
         updateOfferFormButtons();
       });
     };
@@ -1364,7 +1462,7 @@
 
       var toggleBtn = el('button', '', c.is_subscribed ? 'Unsubscribe' : 'Resubscribe');
       toggleBtn.type = 'button';
-      toggleBtn.addEventListener('click', function () { toggleCustomerSubscription(c); });
+      toggleBtn.addEventListener('click', function () { toggleCustomerSubscription(c, toggleBtn); });
 
       list.appendChild(row(null, c.name, pills, sub, null, function () {
         remove('customers', c.id, c.name, loadCustomers);
@@ -1380,21 +1478,30 @@
   }
 
   function loadCustomers() {
+    showListSkeleton('customerList', 'customers', 'Loading customer subscribers & CRM...');
     return db.from('customers').select('*').order('opted_in_at', { ascending: false }).then(function (r) {
       customers = must(r) || [];
       drawCustomers();
-    }).catch(function (e) { toast(say(e)); });
+    }).catch(function (e) {
+      toast(say(e));
+      $('customerList').innerHTML = '<li class="empty">' + say(e) + '</li>';
+    });
   }
 
-  function toggleCustomerSubscription(c) {
+  function toggleCustomerSubscription(c, btn) {
     var newState = !c.is_subscribed;
     var update = { is_subscribed: newState };
     if (!newState) update.unsubscribed_at = new Date().toISOString();
+    if (btn) setButtonLoading(btn, true, 'Updating...');
     db.from('customers').update(update).eq('id', c.id).then(function (r) {
       must(r);
       toast((newState ? 'Subscribed ' : 'Unsubscribed ') + c.name);
       return loadCustomers();
-    }).catch(function (e) { toast(say(e)); });
+    }).catch(function (e) {
+      toast(say(e));
+    }).finally(function () {
+      if (btn) setButtonLoading(btn, false);
+    });
   }
 
   $('searchCustomers').addEventListener('input', function () {
@@ -1431,7 +1538,8 @@
     }
 
     var phone = '+91' + rawPhone;
-    btn.disabled = true;
+    setButtonLoading(btn, true, 'Adding customer...');
+    showActionLoader('Adding customer...', 'Saving customer details and setting up WhatsApp opt-in...');
 
     db.from('customers').insert({
       name: name,
@@ -1446,7 +1554,8 @@
     }).catch(function (e) {
       msg.textContent = say(e);
     }).finally(function () {
-      btn.disabled = false;
+      hideActionLoader();
+      setButtonLoading(btn, false);
     });
   });
 
@@ -1589,7 +1698,7 @@
         return toast('No valid phone numbers found. Click "CSV Format" to view sample.');
       }
 
-      toast('Importing ' + toInsert.length + ' customer' + (toInsert.length === 1 ? '' : 's') + '...');
+      showActionLoader('Importing customers...', 'Importing ' + toInsert.length + ' contact' + (toInsert.length === 1 ? '' : 's') + ' into WhatsApp CRM...');
 
       db.from('customers').upsert(toInsert, { onConflict: 'phone' }).then(function (r) {
         must(r);
@@ -1599,6 +1708,8 @@
         return loadCustomers();
       }).catch(function (err) {
         toast('Import failed: ' + say(err));
+      }).finally(function () {
+        hideActionLoader();
       });
     };
     reader.readAsText(file);
@@ -1619,7 +1730,14 @@
     });
   }
   function loadItems() {
-    return db.from('menu_items').select('*').order('position').then(function (r) { items = must(r); drawItems(); });
+    showListSkeleton('itemList', 'menu', 'Loading menu items...');
+    return db.from('menu_items').select('*').order('position').then(function (r) {
+      items = must(r);
+      drawItems();
+    }).catch(function (e) {
+      toast(say(e));
+      $('itemList').innerHTML = '<li class="empty">' + say(e) + '</li>';
+    });
   }
 
   function openItem(m) {
@@ -1648,8 +1766,8 @@
     var msg = $('itemMsg'), btn = ev.target.querySelector('[type=submit]'), price = $('m-price').value;
     msg.textContent = '';
     var fileToUpload = photoUploader.getFile();
-    btn.disabled = true;
-    btn.textContent = fileToUpload ? 'Uploading photo...' : 'Saving item...';
+    setButtonLoading(btn, true, fileToUpload ? 'Uploading photo...' : 'Saving item...');
+    showActionLoader('Saving menu item...', fileToUpload ? 'Uploading photo and saving menu item...' : 'Saving menu item details to database...');
 
     upload(fileToUpload, 'menu').then(function (url) {
       var row = {
@@ -1674,26 +1792,38 @@
     }).catch(function (e) {
       msg.textContent = say(e);
     }).finally(function () {
-      btn.disabled = false;
-      btn.textContent = 'Save item';
+      hideActionLoader();
+      setButtonLoading(btn, false);
     });
   });
 
   /* HOURS SECTION */
   function loadHours() {
+    var input = $('h-text');
+    if (input && !input.value) input.placeholder = 'Loading opening hours...';
     return db.from('site_settings').select('hours').eq('id', 1).maybeSingle().then(function (r) {
       var d = must(r);
-      $('h-text').value = d ? d.hours : '';
+      if (input) {
+        input.value = d ? d.hours : '';
+        input.placeholder = 'Every day, 11 am to 11 pm';
+      }
     });
   }
   $('hoursForm').addEventListener('submit', function (ev) {
     ev.preventDefault();
-    var msg = $('hoursMsg');
+    var msg = $('hoursMsg'), btn = ev.target.querySelector('[type=submit]');
     msg.textContent = '';
+    setButtonLoading(btn, true, 'Saving hours...');
+    showActionLoader('Saving hours...', 'Updating store opening hours...');
     db.from('site_settings').update({ hours: $('h-text').value.trim() }).eq('id', 1).then(function (r) {
       must(r);
       toast('Hours saved');
-    }).catch(function (e) { msg.textContent = say(e); });
+    }).catch(function (e) {
+      msg.textContent = say(e);
+    }).finally(function () {
+      hideActionLoader();
+      setButtonLoading(btn, false);
+    });
   });
 
   /* LOGIN & AUTH */
@@ -1715,12 +1845,16 @@
     ev.preventDefault();
     var msg = $('loginMsg'), btn = ev.target.querySelector('[type=submit]');
     msg.textContent = '';
-    btn.disabled = true;
+    setButtonLoading(btn, true, 'Logging in...');
     db.auth.signInWithPassword({ email: $('email').value.trim(), password: $('password').value }).then(function (r) {
       if (r.error) throw r.error;
       $('password').value = '';
       return enter();
-    }).catch(function (e) { msg.textContent = say(e); }).finally(function () { btn.disabled = false; });
+    }).catch(function (e) {
+      msg.textContent = say(e);
+    }).finally(function () {
+      setButtonLoading(btn, false);
+    });
   });
 
   $('logout').addEventListener('click', function () {
