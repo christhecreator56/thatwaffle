@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="stylesheet" href="/tokens.css">
 <link rel="stylesheet" href="/twp.css">
-<link rel="stylesheet" href="/admin/admin.css?v=10">
+<link rel="stylesheet" href="/admin/admin.css?v=11">
 </head>
 <body>
 
@@ -100,9 +100,103 @@
           <label class="twp-check" for="o-broadcast"><input id="o-broadcast" type="checkbox"><span><b>Schedule WhatsApp Broadcast to all customers</b></span></label>
           <div id="waDetails" class="wa-details" hidden>
             <div class="twp-field wa-time-field">
-              <label for="o-btime">Broadcast Send Date & Time (IST)</label>
-              <div class="twp-input"><input id="o-btime" type="datetime-local"></div>
+              <div class="wa-time-field__top">
+                <label for="o-btime-trigger">Broadcast Send Date & Time (IST)</label>
+                <div class="wa-time-presets">
+                  <span class="wa-time-presets__label">Quick:</span>
+                  <button type="button" class="wa-preset-chip" data-preset="15m">+15 Mins</button>
+                  <button type="button" class="wa-preset-chip" data-preset="1h">+1 Hour</button>
+                  <button type="button" class="wa-preset-chip" data-preset="tonight">Tonight 7 PM</button>
+                  <button type="button" class="wa-preset-chip" data-preset="tomorrow-morning">Tomorrow 10 AM</button>
+                  <button type="button" class="wa-preset-chip" data-preset="tomorrow-evening">Tomorrow 5 PM</button>
+                </div>
+              </div>
+
+              <!-- Styled Interactive Trigger -->
+              <div class="wa-time-trigger" id="o-btime-trigger" tabindex="0" role="button" aria-haspopup="dialog" aria-expanded="false">
+                <div class="wa-time-trigger__content">
+                  <svg class="wa-time-trigger__icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="4" width="18" height="18" rx="3" ry="3"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                  </svg>
+                  <span id="o-btime-label" class="wa-time-trigger__text">Choose Date & Time (IST)</span>
+                </div>
+                <div class="wa-time-trigger__badge">
+                  <span>IST</span>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+                </div>
+              </div>
+
+              <!-- Synced value container for form submission & validation -->
+              <input id="o-btime" type="hidden">
               <small class="twp-note">When this time arrives, the offer drops on all subscribed WhatsApp numbers automatically.</small>
+
+              <!-- Custom Popover Calendar & Time Picker -->
+              <div class="twp-dtpicker" id="twpDtPicker" hidden role="dialog" aria-modal="true" aria-label="Choose broadcast date and time">
+                <div class="twp-dtpicker__inner">
+                  <div class="twp-dtpicker__header">
+                    <button type="button" class="twp-dtpicker__nav" id="dtPrevMonth" aria-label="Previous month">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                    </button>
+                    <span class="twp-dtpicker__title" id="dtMonthYear">November 2026</span>
+                    <button type="button" class="twp-dtpicker__nav" id="dtNextMonth" aria-label="Next month">
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                    </button>
+                  </div>
+
+                  <div class="twp-dtpicker__body">
+                    <!-- Calendar Panel -->
+                    <div class="twp-dtpicker__calendar">
+                      <div class="twp-dtpicker__weekdays">
+                        <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+                      </div>
+                      <div class="twp-dtpicker__days" id="dtDaysGrid"></div>
+                    </div>
+
+                    <!-- Time Selection Panel -->
+                    <div class="twp-dtpicker__time">
+                      <div class="twp-dtpicker__time-title">Time (IST)</div>
+                      
+                      <div class="twp-dtpicker__time-controls">
+                        <div class="twp-dtpicker__select-wrap">
+                          <label for="dtHourSelect">Hour</label>
+                          <select id="dtHourSelect" class="twp-dtpicker__select"></select>
+                        </div>
+                        <span class="twp-dtpicker__colon">:</span>
+                        <div class="twp-dtpicker__select-wrap">
+                          <label for="dtMinuteSelect">Minute</label>
+                          <select id="dtMinuteSelect" class="twp-dtpicker__select"></select>
+                        </div>
+                        <div class="twp-dtpicker__ampm">
+                          <button type="button" class="twp-ampm-btn is-active" id="dtAmBtn" data-ampm="AM">AM</button>
+                          <button type="button" class="twp-ampm-btn" id="dtPmBtn" data-ampm="PM">PM</button>
+                        </div>
+                      </div>
+
+                      <div class="twp-dtpicker__minute-chips">
+                        <span class="twp-dtpicker__sublbl">Quick mins:</span>
+                        <button type="button" class="twp-min-chip" data-min="00">:00</button>
+                        <button type="button" class="twp-min-chip" data-min="15">:15</button>
+                        <button type="button" class="twp-min-chip" data-min="30">:30</button>
+                        <button type="button" class="twp-min-chip" data-min="45">:45</button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="twp-dtpicker__footer">
+                    <span class="twp-dtpicker__status" id="dtSelectedSummary">15 Nov 2026, 12:30 PM</span>
+                    <div class="twp-dtpicker__btns">
+                      <button type="button" class="twp-btn twp-btn--ghost twp-btn--sm" id="dtCancelBtn">Cancel</button>
+                      <button type="button" class="twp-btn twp-btn--sm" id="dtApplyBtn">
+                        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                        Set Time
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <!-- Custom WhatsApp Message Format Editor -->
@@ -599,6 +693,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="/config.js"></script>
-<script src="/admin/admin.js?v=11"></script>
+<script src="/admin/admin.js?v=12"></script>
 </body>
 </html>

@@ -612,6 +612,372 @@
     updateImageMode();
   }
 
+  /* Custom DateTime Picker & Scheduler UI */
+  var MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  var dtCurrentDate = new Date();
+  var dtSelectedDate = new Date();
+  var dtViewYear = dtCurrentDate.getFullYear();
+  var dtViewMonth = dtCurrentDate.getMonth();
+  var dtHour = 10;
+  var dtMinute = 0;
+  var dtAmPm = 'AM';
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  function formatBtimeDisplay(d) {
+    if (!d || isNaN(d.getTime())) return 'Choose Date & Time (IST)';
+    var t = today();
+    var ymd = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+    var dayLabel = day(ymd);
+    
+    var h = d.getHours();
+    var m = d.getMinutes();
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    var h12 = h % 12 || 12;
+    var timeStr = h12 + ':' + pad(m) + ' ' + ampm;
+
+    if (ymd === t) {
+      return 'Today (' + dayLabel + ') at ' + timeStr;
+    }
+    var tom = new Date();
+    tom.setDate(tom.getDate() + 1);
+    var tomYmd = tom.getFullYear() + '-' + pad(tom.getMonth() + 1) + '-' + pad(tom.getDate());
+    if (ymd === tomYmd) {
+      return 'Tomorrow (' + dayLabel + ') at ' + timeStr;
+    }
+    return dayLabel + ' at ' + timeStr;
+  }
+
+  function updateBtimeUI(val) {
+    var hidden = $('o-btime');
+    var label = $('o-btime-label');
+    if (!hidden) return;
+    hidden.value = val || '';
+    if (!val) {
+      if (label) label.textContent = 'Choose Date & Time (IST)';
+      return;
+    }
+    var d = new Date(val);
+    if (label) label.textContent = formatBtimeDisplay(d);
+    
+    if (!isNaN(d.getTime())) {
+      dtSelectedDate = new Date(d);
+      dtViewYear = d.getFullYear();
+      dtViewMonth = d.getMonth();
+      var rawH = d.getHours();
+      dtHour = rawH % 12 || 12;
+      dtMinute = d.getMinutes();
+      dtAmPm = rawH >= 12 ? 'PM' : 'AM';
+      syncDtControls();
+    }
+  }
+
+  function syncDtControls() {
+    var hSel = $('dtHourSelect');
+    var mSel = $('dtMinuteSelect');
+    var amBtn = $('dtAmBtn');
+    var pmBtn = $('dtPmBtn');
+    if (hSel) hSel.value = pad(dtHour);
+    if (mSel) {
+      var mVal = pad(dtMinute);
+      if (!mSel.querySelector('option[value="' + mVal + '"]')) {
+        var opt = document.createElement('option');
+        opt.value = mVal;
+        opt.textContent = mVal;
+        mSel.appendChild(opt);
+      }
+      mSel.value = mVal;
+    }
+    if (amBtn && pmBtn) {
+      amBtn.classList.toggle('is-active', dtAmPm === 'AM');
+      pmBtn.classList.toggle('is-active', dtAmPm === 'PM');
+    }
+    updateDtStatus();
+  }
+
+  function updateDtStatus() {
+    var stat = $('dtSelectedSummary');
+    if (!stat) return;
+    var ymd = dtSelectedDate.getFullYear() + '-' + pad(dtSelectedDate.getMonth() + 1) + '-' + pad(dtSelectedDate.getDate());
+    var timeStr = dtHour + ':' + pad(dtMinute) + ' ' + dtAmPm;
+    stat.textContent = day(ymd) + ', ' + timeStr;
+  }
+
+  function renderDtCalendar() {
+    var title = $('dtMonthYear');
+    var grid = $('dtDaysGrid');
+    if (!title || !grid) return;
+
+    title.textContent = MONTH_NAMES[dtViewMonth] + ' ' + dtViewYear;
+    grid.innerHTML = '';
+
+    var firstDay = new Date(dtViewYear, dtViewMonth, 1).getDay();
+    var totalDays = new Date(dtViewYear, dtViewMonth + 1, 0).getDate();
+
+    for (var i = 0; i < firstDay; i++) {
+      var empty = document.createElement('div');
+      empty.className = 'twp-dt-day is-empty';
+      grid.appendChild(empty);
+    }
+
+    var now = new Date();
+    var todayYmd = now.getFullYear() + '-' + pad(now.getMonth() + 1) + '-' + pad(now.getDate());
+    var selYmd = dtSelectedDate ? (dtSelectedDate.getFullYear() + '-' + pad(dtSelectedDate.getMonth() + 1) + '-' + pad(dtSelectedDate.getDate())) : '';
+
+    for (var d = 1; d <= totalDays; d++) {
+      var dayBtn = document.createElement('button');
+      dayBtn.type = 'button';
+      dayBtn.className = 'twp-dt-day';
+      dayBtn.textContent = d;
+      
+      var thisYmd = dtViewYear + '-' + pad(dtViewMonth + 1) + '-' + pad(d);
+      if (thisYmd < todayYmd) {
+        dayBtn.classList.add('is-disabled');
+      } else {
+        if (thisYmd === todayYmd) dayBtn.classList.add('is-today');
+        if (thisYmd === selYmd) dayBtn.classList.add('is-selected');
+
+        dayBtn.addEventListener('click', (function (currYear, currMonth, currDay) {
+          return function () {
+            dtSelectedDate = new Date(currYear, currMonth, currDay);
+            renderDtCalendar();
+            updateDtStatus();
+          };
+        })(dtViewYear, dtViewMonth, d));
+      }
+      grid.appendChild(dayBtn);
+    }
+  }
+
+  function applyDateTimeSelection(autoClose) {
+    var h24 = dtAmPm === 'PM' ? (dtHour % 12 + 12) : (dtHour % 12);
+    var finalDate = new Date(dtSelectedDate.getFullYear(), dtSelectedDate.getMonth(), dtSelectedDate.getDate(), h24, dtMinute, 0);
+    var isoLocal = finalDate.getFullYear() + '-' + pad(finalDate.getMonth() + 1) + '-' + pad(finalDate.getDate()) + 'T' + pad(finalDate.getHours()) + ':' + pad(finalDate.getMinutes());
+    
+    updateBtimeUI(isoLocal);
+    closeDtPicker();
+    if (!autoClose) {
+      toast('Broadcast scheduled for ' + formatBtimeDisplay(finalDate));
+    }
+  }
+
+  function openDtPicker() {
+    var picker = $('twpDtPicker');
+    var trigger = $('o-btime-trigger');
+    if (!picker) return;
+
+    var curVal = $('o-btime').value;
+    if (curVal) {
+      var d = new Date(curVal);
+      if (!isNaN(d.getTime())) {
+        dtSelectedDate = new Date(d);
+        dtViewYear = d.getFullYear();
+        dtViewMonth = d.getMonth();
+        var rawH = d.getHours();
+        dtHour = rawH % 12 || 12;
+        dtMinute = d.getMinutes();
+        dtAmPm = rawH >= 12 ? 'PM' : 'AM';
+      }
+    } else {
+      var d = new Date();
+      d.setMinutes(d.getMinutes() + 15);
+      dtSelectedDate = new Date(d);
+      dtViewYear = d.getFullYear();
+      dtViewMonth = d.getMonth();
+      var rawH = d.getHours();
+      dtHour = rawH % 12 || 12;
+      dtMinute = Math.ceil(d.getMinutes() / 5) * 5 % 60;
+      dtAmPm = rawH >= 12 ? 'PM' : 'AM';
+    }
+
+    renderDtCalendar();
+    syncDtControls();
+    picker.hidden = false;
+    if (trigger) trigger.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeDtPicker() {
+    var picker = $('twpDtPicker');
+    var trigger = $('o-btime-trigger');
+    if (!picker || picker.hidden) return;
+    picker.hidden = true;
+    if (trigger) trigger.setAttribute('aria-expanded', 'false');
+  }
+
+  function initDateTimePicker() {
+    var hSel = $('dtHourSelect');
+    var mSel = $('dtMinuteSelect');
+    if (hSel && !hSel.options.length) {
+      for (var h = 1; h <= 12; h++) {
+        var opt = document.createElement('option');
+        opt.value = pad(h);
+        opt.textContent = pad(h);
+        hSel.appendChild(opt);
+      }
+    }
+    if (mSel && !mSel.options.length) {
+      for (var m = 0; m < 60; m += 5) {
+        var opt = document.createElement('option');
+        opt.value = pad(m);
+        opt.textContent = pad(m);
+        mSel.appendChild(opt);
+      }
+    }
+
+    var trigger = $('o-btime-trigger');
+    if (trigger) {
+      trigger.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        var picker = $('twpDtPicker');
+        if (picker && !picker.hidden) {
+          closeDtPicker();
+        } else {
+          openDtPicker();
+        }
+      });
+      trigger.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          ev.preventDefault();
+          openDtPicker();
+        }
+      });
+    }
+
+    var prevBtn = $('dtPrevMonth');
+    if (prevBtn) {
+      prevBtn.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        dtViewMonth--;
+        if (dtViewMonth < 0) {
+          dtViewMonth = 11;
+          dtViewYear--;
+        }
+        renderDtCalendar();
+      });
+    }
+
+    var nextBtn = $('dtNextMonth');
+    if (nextBtn) {
+      nextBtn.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        dtViewMonth++;
+        if (dtViewMonth > 11) {
+          dtViewMonth = 0;
+          dtViewYear++;
+        }
+        renderDtCalendar();
+      });
+    }
+
+    var amBtn = $('dtAmBtn');
+    var pmBtn = $('dtPmBtn');
+    if (amBtn) {
+      amBtn.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        dtAmPm = 'AM';
+        syncDtControls();
+      });
+    }
+    if (pmBtn) {
+      pmBtn.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        dtAmPm = 'PM';
+        syncDtControls();
+      });
+    }
+
+    if (hSel) {
+      hSel.addEventListener('change', function () {
+        dtHour = parseInt(this.value, 10);
+        updateDtStatus();
+      });
+    }
+    if (mSel) {
+      mSel.addEventListener('change', function () {
+        dtMinute = parseInt(this.value, 10);
+        updateDtStatus();
+        // Auto-close on minute select after brief 250ms feedback
+        setTimeout(function () {
+          applyDateTimeSelection(true);
+        }, 250);
+      });
+    }
+
+    // Minute chips (:00, :15, :30, :45) - Auto-closes on selection!
+    document.querySelectorAll('.twp-min-chip').forEach(function (btn) {
+      btn.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        dtMinute = parseInt(this.getAttribute('data-min'), 10);
+        syncDtControls();
+        setTimeout(function () {
+          applyDateTimeSelection(true);
+        }, 180);
+      });
+    });
+
+    // Quick presets (+15 Mins, +1 Hour, Tonight 7 PM, etc.) - Auto-closes on click!
+    document.querySelectorAll('.wa-preset-chip').forEach(function (btn) {
+      btn.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        var preset = this.getAttribute('data-preset');
+        var d = new Date();
+        if (preset === '15m') {
+          d.setMinutes(d.getMinutes() + 15);
+        } else if (preset === '1h') {
+          d.setHours(d.getHours() + 1);
+        } else if (preset === 'tonight') {
+          d.setHours(19, 0, 0, 0);
+          if (d.getTime() <= Date.now()) {
+            d.setDate(d.getDate() + 1);
+          }
+        } else if (preset === 'tomorrow-morning') {
+          d.setDate(d.getDate() + 1);
+          d.setHours(10, 0, 0, 0);
+        } else if (preset === 'tomorrow-evening') {
+          d.setDate(d.getDate() + 1);
+          d.setHours(17, 0, 0, 0);
+        }
+        var iso = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        updateBtimeUI(iso);
+        closeDtPicker();
+        toast('Scheduled for ' + formatBtimeDisplay(d));
+      });
+    });
+
+    var applyBtn = $('dtApplyBtn');
+    if (applyBtn) {
+      applyBtn.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        applyDateTimeSelection(false);
+      });
+    }
+
+    var cancelBtn = $('dtCancelBtn');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        closeDtPicker();
+      });
+    }
+
+    document.addEventListener('click', function (ev) {
+      var picker = $('twpDtPicker');
+      var trg = $('o-btime-trigger');
+      if (!picker || picker.hidden) return;
+      if (!picker.contains(ev.target) && (!trg || !trg.contains(ev.target))) {
+        closeDtPicker();
+      }
+    });
+
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape' && $('twpDtPicker') && !$('twpDtPicker').hidden) {
+        closeDtPicker();
+      }
+    });
+  }
+
+  initDateTimePicker();
+
   function updateOfferFormButtons() {
     var doBroadcast = $('o-broadcast') && $('o-broadcast').checked;
     var saveBtn = $('saveOfferBtn');
@@ -629,11 +995,11 @@
     var checked = $('o-broadcast').checked;
     $('waDetails').hidden = !checked;
     if (checked && !$('o-btime').value) {
-      // Default to now + 10 minutes local time
+      // Default to now + 15 minutes local time
       var d = new Date();
-      d.setMinutes(d.getMinutes() + 10);
-      var pad = function (n) { return (n < 10 ? '0' : '') + n; };
-      $('o-btime').value = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+      d.setMinutes(d.getMinutes() + 15);
+      var defIso = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+      updateBtimeUI(defIso);
     }
     updateOfferFormButtons();
   }
@@ -781,10 +1147,10 @@
     $('waDetails').hidden = !isScheduled;
     if (isScheduled && b.scheduled_at) {
       var d = new Date(b.scheduled_at);
-      var pad = function (n) { return (n < 10 ? '0' : '') + n; };
-      $('o-btime').value = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+      var iso = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+      updateBtimeUI(iso);
     } else {
-      $('o-btime').value = '';
+      updateBtimeUI('');
     }
 
     var customMsg = (b && b.custom_message) || (o && o.custom_message) || DEFAULT_WA_TEMPLATE;
@@ -827,7 +1193,10 @@
 
     if ((doBroadcast || sendImmediately) && !sendImmediately && !btime) {
       msg.textContent = 'Please choose a send date and time for the WhatsApp broadcast.';
-      return $('o-btime').focus();
+      openDtPicker();
+      var trg = $('o-btime-trigger');
+      if (trg) trg.focus();
+      return;
     }
 
     var subCount = customers.filter(function (c) { return c.is_subscribed; }).length;
