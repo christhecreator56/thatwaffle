@@ -309,9 +309,16 @@
       if (opts.onChange) opts.onChange(file, objectUrl);
     }
 
-    dropzone.addEventListener('click', function () { input.click(); });
+    dropzone.addEventListener('click', function () {
+      input.value = '';
+      if (this.tagName !== 'LABEL') input.click();
+    });
     dropzone.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); }
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        input.value = '';
+        input.click();
+      }
     });
 
     ['dragenter', 'dragover'].forEach(function (ev) {

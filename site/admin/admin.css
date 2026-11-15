@@ -118,6 +118,8 @@ input[type=file]{font:inherit;font-size:15px;max-width:100%}
 
 /* Custom Interactive Trigger */
 .wa-time-trigger {
+  width: 100%;
+  font-family: inherit;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -207,6 +209,8 @@ input[type=file]{font:inherit;font-size:15px;max-width:100%}
   transform: translateY(1px);
 }
 .twp-date-trigger {
+  width: 100%;
+  font-family: inherit;
   display: flex;
   align-items: center;
   justify-content: space-between;

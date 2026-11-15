@@ -58,7 +58,7 @@
                 <button type="button" class="date-chip" data-for="start" data-preset="friday">This Fri</button>
               </div>
             </div>
-            <div class="twp-date-trigger" id="o-start-trigger" tabindex="0" role="button" aria-haspopup="dialog" aria-expanded="false">
+            <button type="button" class="twp-date-trigger" id="o-start-trigger" aria-haspopup="dialog" aria-expanded="false">
               <div class="twp-date-trigger__content">
                 <svg class="twp-date-trigger__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <rect x="3" y="4" width="18" height="18" rx="3" ry="3"/>
@@ -71,7 +71,7 @@
               <svg class="twp-date-trigger__chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <polyline points="6 9 12 15 18 9"/>
               </svg>
-            </div>
+            </button>
             <input id="o-start" type="hidden" required>
           </div>
 
@@ -85,7 +85,7 @@
                 <button type="button" class="date-chip" data-for="end" data-preset="month-end">Month end</button>
               </div>
             </div>
-            <div class="twp-date-trigger" id="o-end-trigger" tabindex="0" role="button" aria-haspopup="dialog" aria-expanded="false">
+            <button type="button" class="twp-date-trigger" id="o-end-trigger" aria-haspopup="dialog" aria-expanded="false">
               <div class="twp-date-trigger__content">
                 <svg class="twp-date-trigger__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <rect x="3" y="4" width="18" height="18" rx="3" ry="3"/>
@@ -98,7 +98,7 @@
               <svg class="twp-date-trigger__chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <polyline points="6 9 12 15 18 9"/>
               </svg>
-            </div>
+            </button>
             <input id="o-end" type="hidden" required>
           </div>
         </div>
@@ -133,10 +133,10 @@
         <div class="twp-field">
           <label for="o-poster">Offer Poster</label>
           <div class="twp-uploader" id="o-poster-uploader">
-            <input id="o-poster" type="file" accept="image/jpeg,image/png,image/webp" class="twp-uploader__input" hidden>
+            <input id="o-poster" type="file" accept="image/jpeg,image/png,image/webp" class="twp-uploader__input" style="position:fixed;top:-1000px;left:-1000px;width:1px;height:1px;opacity:0;pointer-events:none;" aria-hidden="true">
             
             <!-- Dropzone / Empty State -->
-            <div class="twp-uploader__dropzone" id="o-poster-dropzone" tabindex="0" role="button" aria-label="Upload offer poster photo">
+            <label for="o-poster" class="twp-uploader__dropzone" id="o-poster-dropzone" role="button" tabindex="0" aria-label="Upload offer poster photo">
               <div class="twp-uploader__icon">
                 <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <rect x="3" y="3" width="18" height="18" rx="3" ry="3"/>
@@ -148,7 +148,7 @@
                 <span class="twp-uploader__title"><b>Choose photo</b> or drag & drop</span>
                 <span class="twp-uploader__hint">JPG, PNG or WebP &bull; up to 5 MB</span>
               </div>
-            </div>
+            </label>
 
             <!-- Active Thumbnail Preview Card -->
             <div class="twp-uploader__preview" id="o-poster-preview" hidden>
@@ -189,7 +189,7 @@
               </div>
 
               <!-- Styled Interactive Trigger -->
-              <div class="wa-time-trigger" id="o-btime-trigger" tabindex="0" role="button" aria-haspopup="dialog" aria-expanded="false">
+              <button type="button" class="wa-time-trigger" id="o-btime-trigger" aria-haspopup="dialog" aria-expanded="false">
                 <div class="wa-time-trigger__content">
                   <svg class="wa-time-trigger__icon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <rect x="3" y="4" width="18" height="18" rx="3" ry="3"/>
@@ -203,7 +203,7 @@
                   <span>IST</span>
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
                 </div>
-              </div>
+              </button>
 
               <!-- Synced value container for form submission & validation -->
               <input id="o-btime" type="hidden">
@@ -489,7 +489,7 @@
           <div class="twp-field"><label for="m-pos">Order on the menu</label><div class="twp-input"><input id="m-pos" type="number" step="1" inputmode="numeric" required></div></div>
         </div>
         <div class="twp-field">
-          <label for="m-scene">Background colour</label>
+          <label for="dropdown-scene-btn">Background colour</label>
           <div class="twp-dropdown" id="dropdown-scene">
             <button type="button" class="twp-dropdown__btn" id="dropdown-scene-btn" aria-haspopup="listbox" aria-expanded="false">
               <span class="twp-dropdown__selected"><span class="scene-dot" style="background:var(--umber);"></span> Burnt umber</span>
@@ -519,10 +519,10 @@
         <div class="twp-field">
           <label for="m-photo">Item Photo</label>
           <div class="twp-uploader" id="m-photo-uploader">
-            <input id="m-photo" type="file" accept="image/jpeg,image/png,image/webp" class="twp-uploader__input" hidden>
+            <input id="m-photo" type="file" accept="image/jpeg,image/png,image/webp" class="twp-uploader__input" style="position:fixed;top:-1000px;left:-1000px;width:1px;height:1px;opacity:0;pointer-events:none;" aria-hidden="true">
             
             <!-- Dropzone / Empty State -->
-            <div class="twp-uploader__dropzone" id="m-photo-dropzone" tabindex="0" role="button" aria-label="Upload menu item photo">
+            <label for="m-photo" class="twp-uploader__dropzone" id="m-photo-dropzone" role="button" tabindex="0" aria-label="Upload menu item photo">
               <div class="twp-uploader__icon">
                 <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <rect x="3" y="3" width="18" height="18" rx="3" ry="3"/>
@@ -534,7 +534,7 @@
                 <span class="twp-uploader__title"><b>Choose photo</b> or drag & drop</span>
                 <span class="twp-uploader__hint">JPG, PNG or WebP &bull; up to 5 MB</span>
               </div>
-            </div>
+            </label>
 
             <!-- Active Thumbnail Preview Card -->
             <div class="twp-uploader__preview" id="m-photo-preview" hidden>
@@ -614,7 +614,7 @@
 
         <!-- Custom Enhanced Dropdown for Source -->
         <div class="twp-field">
-          <label for="c-source">Source</label>
+          <label for="dropdown-source-btn">Source</label>
           <div class="twp-dropdown" id="dropdown-source">
             <button type="button" class="twp-dropdown__btn" id="dropdown-source-btn" aria-haspopup="listbox" aria-expanded="false">
               <span class="twp-dropdown__selected">
@@ -807,6 +807,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="/config.js"></script>
-<script src="/admin/admin.js?v=17"></script>
+<script src="/admin/admin.js?v=18"></script>
 </body>
 </html>
