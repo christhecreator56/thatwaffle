@@ -744,6 +744,11 @@
             updateDtStatus();
           };
         })(dtViewYear, dtViewMonth, d));
+
+        // Double-click a day to immediately apply with currently selected time and auto-close
+        dayBtn.addEventListener('dblclick', function () {
+          applyDateTimeSelection(true);
+        });
       }
       grid.appendChild(dayBtn);
     }
@@ -1224,8 +1229,7 @@
           starts_on: start,
           ends_on: end,
           terms: $('o-terms').value.trim() || 'Terms apply. Dine-in only.',
-          is_visible: $('o-visible').checked,
-          custom_message: customMsgVal
+          is_visible: $('o-visible').checked
         };
         if (url) {
           row.poster_url = url;
