@@ -104,8 +104,8 @@
                 <label for="o-btime-trigger">Broadcast Send Date & Time (IST)</label>
                 <div class="wa-time-presets">
                   <span class="wa-time-presets__label">Quick:</span>
-                  <button type="button" class="wa-preset-chip" data-preset="15m">+15 Mins</button>
-                  <button type="button" class="wa-preset-chip" data-preset="1h">+1 Hour</button>
+                  <button type="button" class="wa-preset-chip" data-preset="15m">Today (+15m)</button>
+                  <button type="button" class="wa-preset-chip" data-preset="1h">Today (+1h)</button>
                   <button type="button" class="wa-preset-chip" data-preset="tonight">Tonight 7 PM</button>
                   <button type="button" class="wa-preset-chip" data-preset="tomorrow-morning">Tomorrow 10 AM</button>
                   <button type="button" class="wa-preset-chip" data-preset="tomorrow-evening">Tomorrow 5 PM</button>
@@ -188,6 +188,7 @@
                   <div class="twp-dtpicker__footer">
                     <span class="twp-dtpicker__status" id="dtSelectedSummary">15 Nov 2026, 12:30 PM</span>
                     <div class="twp-dtpicker__btns">
+                      <button type="button" class="twp-btn twp-btn--ghost twp-btn--sm" id="dtTodayBtn">Today</button>
                       <button type="button" class="twp-btn twp-btn--ghost twp-btn--sm" id="dtCancelBtn">Cancel</button>
                       <button type="button" class="twp-btn twp-btn--sm" id="dtApplyBtn">
                         <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -716,6 +717,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="/config.js"></script>
-<script src="/admin/admin.js?v=14"></script>
+<script src="/admin/admin.js?v=15"></script>
 </body>
 </html>

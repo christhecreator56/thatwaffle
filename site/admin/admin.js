@@ -833,7 +833,8 @@
         if (thisYmd === selYmd) dayBtn.classList.add('is-selected');
 
         dayBtn.addEventListener('click', (function (currYear, currMonth, currDay) {
-          return function () {
+          return function (ev) {
+            if (ev) ev.stopPropagation();
             dtSelectedDate = new Date(currYear, currMonth, currDay);
             renderDtCalendar();
             updateDtStatus();
@@ -841,7 +842,8 @@
         })(dtViewYear, dtViewMonth, d));
 
         // Double-click a day to immediately apply with currently selected time and auto-close
-        dayBtn.addEventListener('dblclick', function () {
+        dayBtn.addEventListener('dblclick', function (ev) {
+          if (ev) ev.stopPropagation();
           applyDateTimeSelection(true);
         });
       }
@@ -1052,6 +1054,19 @@
       });
     }
 
+    var todayBtn = $('dtTodayBtn');
+    if (todayBtn) {
+      todayBtn.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        var now = new Date();
+        dtSelectedDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        dtViewYear = now.getFullYear();
+        dtViewMonth = now.getMonth();
+        renderDtCalendar();
+        updateDtStatus();
+      });
+    }
+
     var cancelBtn = $('dtCancelBtn');
     if (cancelBtn) {
       cancelBtn.addEventListener('click', function (ev) {
@@ -1064,6 +1079,8 @@
       var picker = $('twpDtPicker');
       var trg = $('o-btime-trigger');
       if (!picker || picker.hidden) return;
+      // If the clicked target was unmounted/re-rendered during click handling, ignore
+      if (!document.contains(ev.target)) return;
       if (!picker.contains(ev.target) && (!trg || !trg.contains(ev.target))) {
         closeDtPicker();
       }
