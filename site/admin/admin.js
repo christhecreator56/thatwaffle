@@ -507,6 +507,47 @@
   }
 
   /* WhatsApp Preview Synchronizer */
+  var DEFAULT_WA_TEMPLATE = [
+    '*That Waffle Place*',
+    '',
+    'Hey {name}! 🧇 Fresh offer from *That Waffle Place*:',
+    '',
+    '🔥 *{offer}*',
+    '🏷️ *OFFER:* *{discount}* on your order!',
+    '📅 *Valid:* {validity}',
+    '📝 *Terms:* {terms}',
+    '',
+    'Show this message at the counter or order online to claim! 🧇✨',
+    '_Reply STOP to unsubscribe_'
+  ].join('\n');
+
+  function escapeHtml(str) {
+    return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function formatWhatsAppPreview(rawText, vars) {
+    var text = rawText || '';
+    text = text.replace(/\{name\}|\{\{1\}\}|\{\{Customer Name\}\}/g, '[[VAR:name]]');
+    text = text.replace(/\{offer\}|\{\{2\}\}/g, '[[VAR:offer]]');
+    text = text.replace(/\{discount\}|\{\{3\}\}/g, '[[VAR:discount]]');
+    text = text.replace(/\{validity\}|\{\{4\}\}/g, '[[VAR:validity]]');
+    text = text.replace(/\{terms\}|\{\{5\}\}/g, '[[VAR:terms]]');
+
+    var escaped = escapeHtml(text);
+    escaped = escaped.replace(/\[\[VAR:name\]\]/g, '<span class="wa-prev-var">' + escapeHtml(vars.name || 'Customer') + '</span>');
+    escaped = escaped.replace(/\[\[VAR:offer\]\]/g, '<span class="wa-prev-var">' + escapeHtml(vars.offer || 'Offer') + '</span>');
+    escaped = escaped.replace(/\[\[VAR:discount\]\]/g, '<span class="wa-prev-var">' + escapeHtml(vars.discount || 'Discount') + '</span>');
+    escaped = escaped.replace(/\[\[VAR:validity\]\]/g, '<span class="wa-prev-var">' + escapeHtml(vars.validity || 'Valid dates') + '</span>');
+    escaped = escaped.replace(/\[\[VAR:terms\]\]/g, '<span class="wa-prev-var">' + escapeHtml(vars.terms || 'Terms apply') + '</span>');
+
+    escaped = escaped.replace(/(^|[\s(])\*([^*\n\r]+?)\*(?=[\s).,!?:]|$)/g, '$1<strong>$2</strong>');
+    escaped = escaped.replace(/(^|[\s(])_([^_\n\r]+?)_(?=[\s).,!?:]|$)/g, '$1<em>$2</em>');
+    escaped = escaped.replace(/(^|[\s(])~([^~\n\r]+?)~(?=[\s).,!?:]|$)/g, '$1<del>$2</del>');
+    escaped = escaped.replace(/\r?\n/g, '<br>');
+
+    return escaped;
+  }
+
   function updateImageMode() {
     var thumb = $('waThumb');
     var isDefault = !thumb.src || thumb.src.indexOf('badge-waffle.svg') !== -1;
@@ -540,17 +581,34 @@
     var start = $('o-start').value;
     var end = $('o-end').value;
     var terms = $('o-terms').value.trim() || 'Terms apply. Dine-in only.';
+    var validityStr = !datesOk ? 'Invalid dates (end before start)' : (start && end ? day(start) + ' to ' + day(end) : 'Soon');
 
-    $('waPrevName').textContent = name;
-    $('waPrevDisc').textContent = disc;
-    if (!datesOk) {
-      $('waPrevDates').textContent = 'Invalid dates (end before start)';
-    } else {
-      $('waPrevDates').textContent = start && end ? day(start) + ' to ' + day(end) : 'Soon';
+    var customMsgInput = $('o-custom-msg');
+    var rawCustom = customMsgInput ? customMsgInput.value : '';
+    if (!rawCustom && customMsgInput) {
+      customMsgInput.value = DEFAULT_WA_TEMPLATE;
+      rawCustom = DEFAULT_WA_TEMPLATE;
     }
-    var datesRow = $('waPrevDates').closest('.wa-msg-dates-row');
-    if (datesRow) datesRow.classList.toggle('is-invalid', !datesOk);
-    $('waPrevTerms').textContent = terms;
+
+    var bubble = $('waBubbleContent');
+    if (bubble) {
+      bubble.innerHTML = formatWhatsAppPreview(rawCustom, {
+        name: 'Aravindan',
+        offer: name,
+        discount: disc,
+        validity: validityStr,
+        terms: terms
+      });
+    }
+
+    var counter = $('waMsgCounter');
+    if (counter) {
+      var len = (rawCustom || '').length;
+      counter.textContent = len + ' / 1024';
+      counter.classList.toggle('is-warning', len > 900 && len <= 1024);
+      counter.classList.toggle('is-limit', len > 1024);
+    }
+
     updateImageMode();
   }
 
@@ -581,11 +639,39 @@
   }
 
   ['input', 'change'].forEach(function (ev) {
-    ['o-name', 'o-discount', 'o-start', 'o-end', 'o-terms'].forEach(function (id) {
-      $(id).addEventListener(ev, syncWhatsAppPreview);
+    ['o-name', 'o-discount', 'o-start', 'o-end', 'o-terms', 'o-custom-msg'].forEach(function (id) {
+      var elem = $(id);
+      if (elem) elem.addEventListener(ev, syncWhatsAppPreview);
     });
   });
   $('o-broadcast').addEventListener('change', toggleBroadcastSection);
+
+  document.querySelectorAll('.wa-tag-btn[data-tag]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var tag = this.getAttribute('data-tag');
+      var area = $('o-custom-msg');
+      if (!area) return;
+      var start = area.selectionStart || 0;
+      var end = area.selectionEnd || 0;
+      var val = area.value;
+      area.value = val.substring(0, start) + tag + val.substring(end);
+      area.selectionStart = area.selectionEnd = start + tag.length;
+      area.focus();
+      syncWhatsAppPreview();
+    });
+  });
+
+  var resetMsgBtn = $('resetMsgBtn');
+  if (resetMsgBtn) {
+    resetMsgBtn.addEventListener('click', function () {
+      var area = $('o-custom-msg');
+      if (area) {
+        area.value = DEFAULT_WA_TEMPLATE;
+        syncWhatsAppPreview();
+        toast('Message format reset to default');
+      }
+    });
+  }
 
   /* Instant Test Message */
   $('sendTestBtn').addEventListener('click', function () {
@@ -613,6 +699,7 @@
       ends_on: $('o-end').value || today(),
       terms: $('o-terms').value.trim() || 'Terms apply.',
       poster_url: posterUploader.hasExisting() ? posterUploader.getUrl() : '',
+      custom_message: $('o-custom-msg') ? $('o-custom-msg').value.trim() : '',
       is_test: true
     };
 
@@ -700,6 +787,11 @@
       $('o-btime').value = '';
     }
 
+    var customMsg = (b && b.custom_message) || (o && o.custom_message) || DEFAULT_WA_TEMPLATE;
+    if ($('o-custom-msg')) {
+      $('o-custom-msg').value = customMsg;
+    }
+
     updateOfferFormButtons();
     syncWhatsAppPreview();
     $('offerForm').hidden = false;
@@ -756,13 +848,15 @@
       }
 
       upload(fileToUpload, 'posters').then(function (url) {
+        var customMsgVal = $('o-custom-msg') ? $('o-custom-msg').value.trim() : '';
         var row = {
           name: name,
           discount: discount,
           starts_on: start,
           ends_on: end,
           terms: $('o-terms').value.trim() || 'Terms apply. Dine-in only.',
-          is_visible: $('o-visible').checked
+          is_visible: $('o-visible').checked,
+          custom_message: customMsgVal
         };
         if (url) {
           row.poster_url = url;
@@ -790,7 +884,8 @@
               starts_on: savedOffer.starts_on,
               ends_on: savedOffer.ends_on,
               terms: savedOffer.terms,
-              poster_url: savedOffer.poster_url || ''
+              poster_url: savedOffer.poster_url || '',
+              custom_message: customMsgVal
             };
             var bp = existingScheduled ?
               db.from('broadcasts').update(bRow).eq('id', existingScheduled.id).select() :

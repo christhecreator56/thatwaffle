@@ -7,7 +7,7 @@
 <meta name="robots" content="noindex,nofollow">
 <link rel="stylesheet" href="/tokens.css">
 <link rel="stylesheet" href="/twp.css">
-<link rel="stylesheet" href="/admin/admin.css?v=9">
+<link rel="stylesheet" href="/admin/admin.css?v=10">
 </head>
 <body>
 
@@ -105,6 +105,29 @@
               <small class="twp-note">When this time arrives, the offer drops on all subscribed WhatsApp numbers automatically.</small>
             </div>
 
+            <!-- Custom WhatsApp Message Format Editor -->
+            <div class="twp-field wa-msg-field">
+              <div class="wa-msg-field__header">
+                <label for="o-custom-msg">WhatsApp Message Format & Content</label>
+                <div class="wa-msg-tags">
+                  <span class="wa-msg-tags__label">Insert:</span>
+                  <button type="button" class="wa-tag-btn" data-tag="{name}" title="Insert customer's name">+ Name</button>
+                  <button type="button" class="wa-tag-btn" data-tag="{offer}" title="Insert offer title">+ Offer</button>
+                  <button type="button" class="wa-tag-btn" data-tag="{discount}" title="Insert discount percentage / details">+ Discount</button>
+                  <button type="button" class="wa-tag-btn" data-tag="{validity}" title="Insert offer dates">+ Dates</button>
+                  <button type="button" class="wa-tag-btn" data-tag="{terms}" title="Insert terms and conditions">+ Terms</button>
+                  <button type="button" class="wa-tag-btn wa-tag-btn--reset" id="resetMsgBtn" title="Reset to default message template">↺ Reset default</button>
+                </div>
+              </div>
+              <div class="twp-input wa-msg-input">
+                <textarea id="o-custom-msg" rows="7" maxlength="1024" placeholder="Customize the complete WhatsApp message text..."></textarea>
+              </div>
+              <div class="wa-msg-field__footer">
+                <small class="twp-note">Use WhatsApp markdown: <code>*bold*</code>, <code>_italics_</code>, <code>~strike~</code>. Dynamic tags <code>{name}</code>, <code>{offer}</code>, <code>{discount}</code>, <code>{validity}</code>, <code>{terms}</code> are replaced automatically for each customer.</small>
+                <span class="wa-msg-counter" id="waMsgCounter">0 / 1024</span>
+              </div>
+            </div>
+
             <!-- WhatsApp Marketing Studio: Live Phone Mockup & Campaign Details -->
             <div class="wa-studio">
               <!-- Left Column: Realistic Phone Simulator -->
@@ -183,29 +206,7 @@
 
                       <!-- Message Body with Native WhatsApp Typography -->
                       <div class="wa-bubble__body">
-                        <p class="wa-msg-greeting">Hey <strong>{{Customer Name}}</strong>! 🧇 Fresh offer from <strong>That Waffle Place</strong>:</p>
-                        
-                        <!-- Authentic WhatsApp Blockquote Highlight -->
-                        <div class="wa-msg-quote">
-                          <div class="wa-msg-title-row">
-                            <span class="wa-msg-fire">🔥</span>
-                            <strong class="wa-msg-title" id="waPrevName">WEEEKEND OFFER</strong>
-                          </div>
-                          <div class="wa-msg-disc-row">
-                            <span class="wa-msg-badge-tag">OFFER</span>
-                            <strong class="wa-msg-disc" id="waPrevDisc">10% off</strong> on your order!
-                          </div>
-                          <div class="wa-msg-dates-row">
-                            <span class="wa-msg-label">📅 Valid:</span>
-                            <span id="waPrevDates">14 Nov to 15 Nov</span>
-                          </div>
-                          <div class="wa-msg-terms-row">
-                            <span class="wa-msg-label">📝 Terms:</span>
-                            <span id="waPrevTerms">Terms apply. Dine-in only.</span>
-                          </div>
-                        </div>
-
-                        <p class="wa-msg-cta-hint">Show this message at the counter or order online to claim! 🧇✨</p>
+                        <div id="waBubbleContent" class="wa-msg-custom-content"></div>
 
                         <!-- Footer disclaimer & time -->
                         <div class="wa-bubble__meta">
@@ -598,6 +599,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="/config.js"></script>
-<script src="/admin/admin.js?v=10"></script>
+<script src="/admin/admin.js?v=11"></script>
 </body>
 </html>

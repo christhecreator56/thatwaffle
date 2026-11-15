@@ -124,6 +124,37 @@ def _format_offer_date(iso_str):
             pass
     return raw
 
+def _clean_image_bytes(raw, default_mime='image/jpeg'):
+    if not raw:
+        return None, None
+    if isinstance(raw, str):
+        raw = raw.encode('utf-8')
+    if raw.startswith(b'--'):
+        idx_png = raw.find(b'\x89PNG\r\n\x1a\n')
+        if idx_png == -1: idx_png = raw.find(b'\x89PNG')
+        idx_jpg = raw.find(b'\xff\xd8\xff')
+        idx_webp = raw.find(b'RIFF') if (raw.find(b'RIFF') != -1 and b'WEBP' in raw[raw.find(b'RIFF'):raw.find(b'RIFF')+16]) else -1
+
+        starts = [(i, m) for i, m in [(idx_png, 'image/png'), (idx_jpg, 'image/jpeg'), (idx_webp, 'image/webp')] if i != -1]
+        if starts:
+            starts.sort(key=lambda x: x[0])
+            start_pos, detected_mime = starts[0]
+            first_line = raw.split(b'\r\n')[0].strip()
+            end_pos = raw.rfind(first_line)
+            if end_pos > start_pos:
+                raw = raw[start_pos:end_pos].rstrip(b'\r\n-')
+            else:
+                raw = raw[start_pos:]
+            default_mime = detected_mime
+
+    if raw.startswith(b'\x89PNG'):
+        return raw, 'image/png'
+    elif raw.startswith(b'\xff\xd8\xff'):
+        return raw, 'image/jpeg'
+    elif raw.startswith(b'RIFF') and b'WEBP' in raw[:16]:
+        return raw, 'image/webp'
+    return raw, default_mime
+
 def _resolve_poster_bytes(poster_url, poster_data_url):
     supported = {
         'image/jpeg': 'poster.jpg',
@@ -137,10 +168,11 @@ def _resolve_poster_bytes(poster_url, poster_data_url):
             mime = header.split(';', 1)[0].split(':', 1)[1].lower()
             if mime == 'image/jpg':
                 mime = 'image/jpeg'
-            if mime in supported:
-                raw = base64.b64decode(b64)
-                if 0 < len(raw) <= 5 * 1024 * 1024:
-                    return mime, raw, supported[mime]
+            raw = base64.b64decode(b64)
+            raw, mime = _clean_image_bytes(raw, mime)
+            fname = supported.get(mime, 'poster.png')
+            if raw and 0 < len(raw) <= 5 * 1024 * 1024:
+                return mime, raw, fname
         except Exception:
             pass
 
@@ -159,12 +191,12 @@ def _resolve_poster_bytes(poster_url, poster_data_url):
                 if os.path.commonpath([media_root, candidate]) == media_root and os.path.isfile(candidate):
                     ext = os.path.splitext(candidate)[1].lower()
                     ext_map = {'.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp'}
-                    mime = ext_map.get(ext)
-                    if mime:
-                        with open(candidate, 'rb') as f:
-                            raw = f.read()
-                        if 0 < len(raw) <= 5 * 1024 * 1024:
-                            return mime, raw, os.path.basename(candidate)
+                    mime = ext_map.get(ext, 'image/jpeg')
+                    with open(candidate, 'rb') as f:
+                        raw = f.read()
+                    raw, mime = _clean_image_bytes(raw, mime)
+                    if raw and 0 < len(raw) <= 5 * 1024 * 1024:
+                        return mime, raw, os.path.basename(candidate)
             except Exception:
                 pass
     return None
@@ -286,16 +318,25 @@ def send_whatsapp_message(to_phone, offer_data, customer_name="Waffle Lover", is
                 print(f"[WHATSAPP MEDIA UPLOAD WARNING] {media_err}", flush=True)
         return None
 
-    text_body = (
-        f"*That Waffle Place*\n\n"
-        f"Hey {customer_name}! 🧇 Fresh offer from *That Waffle Place*:\n\n"
-        f"🔥 *{offer_name}*\n"
-        f"🏷️ *OFFER:* *{discount}* on your order!\n"
-        f"📅 *Valid:* {validity}\n"
-        f"📝 *Terms:* {terms}\n\n"
-        f"Show this message at the counter or order online to claim! 🧇✨\n"
-        f"_Reply STOP to unsubscribe_"
-    )
+    custom_msg = (offer_data.get('custom_message') or '').strip()
+    if custom_msg:
+        text_body = custom_msg
+        text_body = text_body.replace('{name}', customer_name).replace('{{Customer Name}}', customer_name).replace('{{1}}', customer_name)
+        text_body = text_body.replace('{offer}', offer_name).replace('{{2}}', offer_name)
+        text_body = text_body.replace('{discount}', discount).replace('{{3}}', discount)
+        text_body = text_body.replace('{validity}', validity).replace('{{4}}', validity)
+        text_body = text_body.replace('{terms}', terms).replace('{{5}}', terms)
+    else:
+        text_body = (
+            f"*That Waffle Place*\n\n"
+            f"Hey {customer_name}! 🧇 Fresh offer from *That Waffle Place*:\n\n"
+            f"🔥 *{offer_name}*\n"
+            f"🏷️ *OFFER:* *{discount}* on your order!\n"
+            f"📅 *Valid:* {validity}\n"
+            f"📝 *Terms:* {terms}\n\n"
+            f"Show this message at the counter or order online to claim! 🧇✨\n"
+            f"_Reply STOP to unsubscribe_"
+        )
 
     if delivery_mode == 'hello_world':
         payload = {
@@ -441,8 +482,12 @@ def execute_broadcast(broadcast_id):
                 "starts_on": broadcast.get('starts_on', ''),
                 "ends_on": broadcast.get('ends_on', ''),
                 "terms": broadcast.get('terms') or 'Terms apply. Dine-in only.',
-                "poster_url": broadcast.get('poster_url', '')
+                "poster_url": broadcast.get('poster_url', ''),
+                "custom_message": broadcast.get('custom_message', '')
             }
+        else:
+            if broadcast.get('custom_message') and not offer.get('custom_message'):
+                offer['custom_message'] = broadcast.get('custom_message')
 
         customers = [c for c in ldb.get('customers', []) if c.get('is_subscribed')]
         sent_count = 0
@@ -523,13 +568,17 @@ class WaffleRequestHandler(http.server.SimpleHTTPRequestHandler):
         content_len = int(self.headers.get('Content-Length', 0))
         body_bytes = self.rfile.read(content_len) if content_len > 0 else b''
 
+        # Clean multipart wrapper if uploaded via browser FormData
+        clean_bytes, _ = _clean_image_bytes(body_bytes)
+        file_bytes = clean_bytes if clean_bytes else body_bytes
+
         # Save to local storage on disk
         local_dest = os.path.normpath(os.path.join(SITE_DIR, 'uploads', 'media', subpath))
         os.makedirs(os.path.dirname(local_dest), exist_ok=True)
         try:
             with open(local_dest, 'wb') as f:
-                f.write(body_bytes)
-            print(f"[STORAGE UPLOAD] Saved {len(body_bytes)} bytes locally to {local_dest}", flush=True)
+                f.write(file_bytes)
+            print(f"[STORAGE UPLOAD] Saved {len(file_bytes)} bytes locally to {local_dest}", flush=True)
         except Exception as e:
             print(f"[STORAGE ERROR] Failed writing local upload: {e}", flush=True)
 
