@@ -49,8 +49,84 @@
         <div class="twp-field"><label for="o-name">Offer name</label><div class="twp-input"><input id="o-name" required maxlength="80"></div></div>
         <div class="twp-field"><label for="o-discount">Discount</label><div class="twp-input"><input id="o-discount" required maxlength="120" placeholder="Second wedge at half price"></div></div>
         <div class="split">
-          <div class="twp-field"><label for="o-start">Starts</label><div class="twp-input"><input id="o-start" type="date" required></div></div>
-          <div class="twp-field"><label for="o-end">Ends</label><div class="twp-input"><input id="o-end" type="date" required></div></div>
+          <div class="twp-field date-field-wrap">
+            <div class="date-field-header">
+              <label for="o-start-trigger">Starts</label>
+              <div class="date-chips">
+                <button type="button" class="date-chip" data-for="start" data-preset="today">Today</button>
+                <button type="button" class="date-chip" data-for="start" data-preset="tomorrow">Tomorrow</button>
+                <button type="button" class="date-chip" data-for="start" data-preset="friday">This Fri</button>
+              </div>
+            </div>
+            <div class="twp-date-trigger" id="o-start-trigger" tabindex="0" role="button" aria-haspopup="dialog" aria-expanded="false">
+              <div class="twp-date-trigger__content">
+                <svg class="twp-date-trigger__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="18" rx="3" ry="3"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span class="twp-date-trigger__text" id="o-start-display">Select start date</span>
+              </div>
+              <svg class="twp-date-trigger__chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </div>
+            <input id="o-start" type="hidden" required>
+          </div>
+
+          <div class="twp-field date-field-wrap">
+            <div class="date-field-header">
+              <label for="o-end-trigger">Ends</label>
+              <div class="date-chips">
+                <button type="button" class="date-chip" data-for="end" data-preset="same-day">Same day</button>
+                <button type="button" class="date-chip" data-for="end" data-preset="3days">+3 Days</button>
+                <button type="button" class="date-chip" data-for="end" data-preset="1week">+1 Week</button>
+                <button type="button" class="date-chip" data-for="end" data-preset="month-end">Month end</button>
+              </div>
+            </div>
+            <div class="twp-date-trigger" id="o-end-trigger" tabindex="0" role="button" aria-haspopup="dialog" aria-expanded="false">
+              <div class="twp-date-trigger__content">
+                <svg class="twp-date-trigger__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="18" rx="3" ry="3"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span class="twp-date-trigger__text" id="o-end-display">Select end date</span>
+              </div>
+              <svg class="twp-date-trigger__chevron" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </div>
+            <input id="o-end" type="hidden" required>
+          </div>
+        </div>
+
+        <!-- Branded Custom Date Picker Popup for Starts / Ends -->
+        <div class="twp-dtpicker twp-datepicker-popup" id="twpDatePopup" hidden role="dialog" aria-modal="true" aria-label="Select date">
+          <div class="twp-dtpicker__inner">
+            <div class="twp-dtpicker__header">
+              <button type="button" class="twp-dtpicker__nav" id="dpPrevMonth" aria-label="Previous month">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </button>
+              <div class="twp-dtpicker__title" id="dpMonthYear">November 2026</div>
+              <button type="button" class="twp-dtpicker__nav" id="dpNextMonth" aria-label="Next month">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
+            <div class="twp-dtpicker__weekdays">
+              <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+            </div>
+            <div class="twp-dtpicker__days" id="dpDaysGrid"></div>
+            <div class="twp-dtpicker__footer">
+              <span class="twp-dtpicker__status" id="dpSelectedStatus">Click any day to select</span>
+              <div class="twp-dtpicker__btns">
+                <button type="button" class="twp-btn twp-btn--ghost twp-btn--sm" id="dpTodayBtn">Today</button>
+                <button type="button" class="twp-btn twp-btn--ghost twp-btn--sm" id="dpCloseBtn">Close</button>
+              </div>
+            </div>
+          </div>
         </div>
         <p class="twp-err twp-field-err" id="o-date-err" role="alert" hidden></p>
         <div class="twp-field"><label for="o-terms">Terms</label><div class="twp-input"><textarea id="o-terms" required rows="3" maxlength="500"></textarea></div></div>
@@ -731,6 +807,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="/config.js"></script>
-<script src="/admin/admin.js?v=16"></script>
+<script src="/admin/admin.js?v=17"></script>
 </body>
 </html>

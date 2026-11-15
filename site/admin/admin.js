@@ -651,13 +651,15 @@
 
   function validateOfferDates() {
     var startEl = $('o-start'), endEl = $('o-end'), errEl = $('o-date-err');
-    var start = startEl.value, end = endEl.value;
-    if (start) endEl.min = start;
-    else endEl.removeAttribute('min');
+    var start = startEl ? startEl.value : '', end = endEl ? endEl.value : '';
 
     var bad = !!(start && end && end < start);
-    endEl.setCustomValidity(bad ? 'End date must be on or after the start date.' : '');
-    var box = endEl.closest('.twp-input');
+    if (endEl && endEl.setCustomValidity) {
+      endEl.setCustomValidity(bad ? 'End date must be on or after the start date.' : '');
+    }
+    var trigger = $('o-end-trigger');
+    if (trigger) trigger.classList.toggle('is-invalid', bad);
+    var box = endEl && endEl.closest('.twp-input');
     if (box) box.classList.toggle('is-invalid', bad);
     if (errEl) {
       errEl.textContent = bad ? 'End date cannot be before start date.' : '';
@@ -1095,6 +1097,303 @@
 
   initDateTimePicker();
 
+  /* STARTS & ENDS BRANDED DATE PICKERS */
+  var dpCurrentField = null; // 'start' or 'end'
+  var dpViewYear = new Date().getFullYear();
+  var dpViewMonth = new Date().getMonth();
+
+  function toYmd(d) {
+    if (!d || isNaN(d.getTime())) return '';
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+
+  function formatDateDisplay(ymd) {
+    if (!ymd) return 'Select date';
+    var p = ymd.split('-');
+    if (p.length !== 3) return ymd;
+    var d = new Date(+p[0], +p[1] - 1, +p[2]);
+    if (isNaN(d.getTime())) return ymd;
+    var dayNum = d.getDate();
+    var mon = MONTH_NAMES[d.getMonth()].slice(0, 3);
+    var weekday = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()];
+    var t = today();
+    if (ymd === t) {
+      return 'Today (' + dayNum + ' ' + mon + ' ' + d.getFullYear() + ')';
+    }
+    var tom = new Date();
+    tom.setDate(tom.getDate() + 1);
+    if (ymd === toYmd(tom)) {
+      return 'Tomorrow (' + dayNum + ' ' + mon + ')';
+    }
+    return dayNum + ' ' + mon + ' ' + d.getFullYear() + ' (' + weekday + ')';
+  }
+
+  function setStartDate(ymd) {
+    var inp = $('o-start');
+    if (inp) inp.value = ymd || '';
+    var disp = $('o-start-display');
+    if (disp) disp.textContent = ymd ? formatDateDisplay(ymd) : 'Select start date';
+    validateOfferDates();
+    syncWhatsAppPreview();
+  }
+
+  function setEndDate(ymd) {
+    var inp = $('o-end');
+    if (inp) inp.value = ymd || '';
+    var disp = $('o-end-display');
+    if (disp) disp.textContent = ymd ? formatDateDisplay(ymd) : 'Select end date';
+    validateOfferDates();
+    syncWhatsAppPreview();
+  }
+
+  function openDatePicker(field) {
+    dpCurrentField = field;
+    var popup = $('twpDatePopup');
+    var trigger = $(field === 'start' ? 'o-start-trigger' : 'o-end-trigger');
+    if (!popup || !trigger) return;
+
+    trigger.parentElement.appendChild(popup);
+
+    var curVal = $(field === 'start' ? 'o-start' : 'o-end').value;
+    if (curVal) {
+      var p = curVal.split('-');
+      if (p.length === 3) {
+        dpViewYear = +p[0];
+        dpViewMonth = +p[1] - 1;
+      }
+    } else {
+      var now = new Date();
+      dpViewYear = now.getFullYear();
+      dpViewMonth = now.getMonth();
+    }
+
+    renderDatePopup();
+    popup.hidden = false;
+    trigger.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeDatePicker() {
+    var popup = $('twpDatePopup');
+    if (!popup || popup.hidden) return;
+    popup.hidden = true;
+    if ($('o-start-trigger')) $('o-start-trigger').setAttribute('aria-expanded', 'false');
+    if ($('o-end-trigger')) $('o-end-trigger').setAttribute('aria-expanded', 'false');
+    dpCurrentField = null;
+  }
+
+  function renderDatePopup() {
+    var title = $('dpMonthYear');
+    var grid = $('dpDaysGrid');
+    var status = $('dpSelectedStatus');
+    if (!title || !grid) return;
+
+    title.textContent = MONTH_NAMES[dpViewMonth] + ' ' + dpViewYear;
+    grid.innerHTML = '';
+
+    var firstDay = new Date(dpViewYear, dpViewMonth, 1).getDay();
+    var totalDays = new Date(dpViewYear, dpViewMonth + 1, 0).getDate();
+
+    for (var i = 0; i < firstDay; i++) {
+      var empty = document.createElement('div');
+      empty.className = 'twp-dt-day is-empty';
+      grid.appendChild(empty);
+    }
+
+    var now = new Date();
+    var todayYmd = toYmd(now);
+    var activeVal = dpCurrentField === 'start' ? $('o-start').value : $('o-end').value;
+    var minDateYmd = dpCurrentField === 'end' ? ($('o-start').value || todayYmd) : '';
+
+    if (status) {
+      status.textContent = 'Selecting ' + (dpCurrentField === 'start' ? 'Start date' : 'End date');
+    }
+
+    for (var d = 1; d <= totalDays; d++) {
+      var dayBtn = document.createElement('button');
+      dayBtn.type = 'button';
+      dayBtn.className = 'twp-dt-day';
+      dayBtn.textContent = d;
+
+      var thisYmd = dpViewYear + '-' + pad(dpViewMonth + 1) + '-' + pad(d);
+
+      if (minDateYmd && thisYmd < minDateYmd) {
+        dayBtn.classList.add('is-disabled');
+      } else {
+        if (thisYmd === todayYmd) dayBtn.classList.add('is-today');
+        if (thisYmd === activeVal) dayBtn.classList.add('is-selected');
+
+        dayBtn.addEventListener('click', (function (selectedYmd) {
+          return function (ev) {
+            if (ev) ev.stopPropagation();
+            if (dpCurrentField === 'start') {
+              setStartDate(selectedYmd);
+              var curEnd = $('o-end').value;
+              if (curEnd && curEnd < selectedYmd) {
+                setEndDate(selectedYmd);
+              }
+            } else if (dpCurrentField === 'end') {
+              setEndDate(selectedYmd);
+            }
+            closeDatePicker();
+          };
+        })(thisYmd));
+      }
+      grid.appendChild(dayBtn);
+    }
+  }
+
+  function initDatePickers() {
+    var startTrg = $('o-start-trigger');
+    var endTrg = $('o-end-trigger');
+
+    if (startTrg) {
+      startTrg.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        if (dpCurrentField === 'start' && $('twpDatePopup') && !$('twpDatePopup').hidden) {
+          closeDatePicker();
+        } else {
+          closeDtPicker();
+          openDatePicker('start');
+        }
+      });
+      startTrg.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          ev.preventDefault();
+          openDatePicker('start');
+        }
+      });
+    }
+
+    if (endTrg) {
+      endTrg.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        if (dpCurrentField === 'end' && $('twpDatePopup') && !$('twpDatePopup').hidden) {
+          closeDatePicker();
+        } else {
+          closeDtPicker();
+          openDatePicker('end');
+        }
+      });
+      endTrg.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          ev.preventDefault();
+          openDatePicker('end');
+        }
+      });
+    }
+
+    var prevBtn = $('dpPrevMonth');
+    var nextBtn = $('dpNextMonth');
+    if (prevBtn) {
+      prevBtn.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        dpViewMonth--;
+        if (dpViewMonth < 0) { dpViewMonth = 11; dpViewYear--; }
+        renderDatePopup();
+      });
+    }
+    if (nextBtn) {
+      nextBtn.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        dpViewMonth++;
+        if (dpViewMonth > 11) { dpViewMonth = 0; dpViewYear++; }
+        renderDatePopup();
+      });
+    }
+
+    var todayBtn = $('dpTodayBtn');
+    if (todayBtn) {
+      todayBtn.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        var t = today();
+        if (dpCurrentField === 'start') {
+          setStartDate(t);
+          var curEnd = $('o-end').value;
+          if (curEnd && curEnd < t) setEndDate(t);
+        } else if (dpCurrentField === 'end') {
+          setEndDate(t);
+        }
+        closeDatePicker();
+      });
+    }
+
+    var closeBtn = $('dpCloseBtn');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        closeDatePicker();
+      });
+    }
+
+    document.querySelectorAll('.date-chip').forEach(function (chip) {
+      chip.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        var forField = this.dataset.for;
+        var preset = this.dataset.preset;
+        var now = new Date();
+
+        if (forField === 'start') {
+          if (preset === 'today') {
+            setStartDate(toYmd(now));
+          } else if (preset === 'tomorrow') {
+            var tom = new Date(now);
+            tom.setDate(tom.getDate() + 1);
+            setStartDate(toYmd(tom));
+          } else if (preset === 'friday') {
+            var d = new Date(now);
+            var dayOfWeek = d.getDay();
+            var diff = (5 - dayOfWeek + 7) % 7;
+            if (diff === 0) diff = 7;
+            d.setDate(d.getDate() + diff);
+            setStartDate(toYmd(d));
+          }
+          if ($('o-end').value && $('o-end').value < $('o-start').value) {
+            setEndDate($('o-start').value);
+          }
+        } else if (forField === 'end') {
+          var baseStart = $('o-start').value || today();
+          var p = baseStart.split('-');
+          var baseD = new Date(+p[0], +p[1] - 1, +p[2]);
+
+          if (preset === 'same-day') {
+            setEndDate(baseStart);
+          } else if (preset === '3days') {
+            var d = new Date(baseD);
+            d.setDate(d.getDate() + 3);
+            setEndDate(toYmd(d));
+          } else if (preset === '1week') {
+            var d = new Date(baseD);
+            d.setDate(d.getDate() + 7);
+            setEndDate(toYmd(d));
+          } else if (preset === 'month-end') {
+            var d = new Date(baseD.getFullYear(), baseD.getMonth() + 1, 0);
+            setEndDate(toYmd(d));
+          }
+        }
+        closeDatePicker();
+      });
+    });
+
+    document.addEventListener('click', function (ev) {
+      var popup = $('twpDatePopup');
+      var sTrg = $('o-start-trigger');
+      var eTrg = $('o-end-trigger');
+      if (!popup || popup.hidden) return;
+      if (!document.contains(ev.target)) return;
+      if (!popup.contains(ev.target) && (!sTrg || !sTrg.contains(ev.target)) && (!eTrg || !eTrg.contains(ev.target))) {
+        closeDatePicker();
+      }
+    });
+
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape' && $('twpDatePopup') && !$('twpDatePopup').hidden) {
+        closeDatePicker();
+      }
+    });
+  }
+
+  initDatePickers();
+
   function updateOfferFormButtons() {
     var doBroadcast = $('o-broadcast') && $('o-broadcast').checked;
     var saveBtn = $('saveOfferBtn');
@@ -1163,7 +1462,7 @@
     if (!validateOfferDates()) {
       testMsg.textContent = 'End date cannot be before start date.';
       $('offerMsg').textContent = 'End date cannot be before start date.';
-      return $('o-end').focus();
+      return ($('o-end-trigger') || $('o-end')).focus();
     }
     var rawPhone = $('testPhone').value.trim().replace(/\D/g, '');
     if (!/^[6-9][0-9]{9}$/.test(rawPhone)) {
@@ -1244,8 +1543,16 @@
     $('offerTitle').textContent = o ? 'Edit offer' : 'Add offer';
     $('o-name').value = o ? o.name : '';
     $('o-discount').value = o ? o.discount : '';
-    $('o-start').value = o ? o.starts_on : '';
-    $('o-end').value = o ? o.ends_on : '';
+
+    var startVal = o ? o.starts_on : today();
+    var endVal = o ? o.ends_on : (function () {
+      var d = new Date();
+      d.setDate(d.getDate() + 3);
+      return toYmd(d);
+    })();
+    setStartDate(startVal);
+    setEndDate(endVal);
+
     $('o-terms').value = o ? o.terms : '';
     $('o-visible').checked = o ? o.is_visible : true;
     $('offerMsg').textContent = '';
@@ -1292,7 +1599,7 @@
 
     if (!validateOfferDates()) {
       msg.textContent = 'End date cannot be before start date.';
-      return $('o-end').focus();
+      return ($('o-end-trigger') || $('o-end')).focus();
     }
 
     var name = $('o-name').value.trim();

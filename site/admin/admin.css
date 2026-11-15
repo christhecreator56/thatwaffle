@@ -163,6 +163,114 @@ input[type=file]{font:inherit;font-size:15px;max-width:100%}
   color: var(--dune);
 }
 
+/* Custom Date Trigger (Starts / Ends) */
+.date-field-wrap {
+  position: relative;
+}
+.date-field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.date-field-header label {
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--dune);
+}
+.date-chips {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.date-chip {
+  appearance: none;
+  border: 1.5px solid var(--dune);
+  background: var(--kinari);
+  border-radius: var(--radius-pill);
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--dune);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.4;
+}
+.date-chip:hover {
+  background: var(--yamabuki);
+  transform: translateY(-1px);
+}
+.date-chip:active {
+  transform: translateY(1px);
+}
+.twp-date-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 2px solid var(--dune);
+  border-radius: var(--radius-md);
+  box-shadow: var(--sticker-sm);
+  cursor: pointer;
+  user-select: none;
+  min-height: 48px;
+  transition: all 0.15s ease;
+}
+.twp-date-trigger:hover,
+.twp-date-trigger:focus-visible {
+  border-color: var(--yamabuki);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(248, 181, 0, 0.35), var(--sticker-sm);
+}
+.twp-date-trigger.is-invalid {
+  border-color: #c62828 !important;
+  box-shadow: 0 0 0 2px rgba(198, 40, 40, 0.25) !important;
+}
+.twp-date-trigger__content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.twp-date-trigger__icon {
+  color: var(--dune);
+  flex: none;
+}
+.twp-date-trigger__text {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--dune);
+}
+.twp-date-trigger__chevron {
+  color: var(--ink-muted);
+  flex: none;
+  transition: transform 0.15s ease;
+}
+.twp-date-trigger[aria-expanded="true"] .twp-date-trigger__chevron {
+  transform: rotate(180deg);
+}
+
+/* Date-only compact popup */
+.twp-datepicker-popup {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 60;
+  width: min(100vw - 32px, 320px);
+  max-width: 320px;
+}
+.twp-datepicker-popup .twp-dtpicker__inner {
+  padding: var(--space-3);
+  gap: var(--space-2);
+}
+.twp-datepicker-popup .twp-dt-day {
+  height: 34px;
+  font-size: 13.5px;
+}
+
 /* Custom Popover Calendar & Time Picker */
 .twp-dtpicker {
   position: absolute;
@@ -237,7 +345,8 @@ input[type=file]{font:inherit;font-size:15px;max-width:100%}
   color: #715545;
   margin-bottom: 4px;
 }
-.twp-dtpicker__days {
+.twp-dtpicker__days,
+.twp-dtpicker__grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 3px;
@@ -401,8 +510,9 @@ input[type=file]{font:inherit;font-size:15px;max-width:100%}
   gap: 6px;
 }
 .twp-btn--sm {
-  padding: 6px 12px !important;
-  font-size: 12.5px !important;
+  min-height: 32px !important;
+  padding: 4px 10px !important;
+  font-size: 12px !important;
   display: inline-flex;
   align-items: center;
   gap: 4px;
