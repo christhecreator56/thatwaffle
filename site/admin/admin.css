@@ -2165,3 +2165,18 @@ input[type=file]{font:inherit;font-size:15px;max-width:100%}
   border-radius: var(--radius-pill);
   animation: loaderBarGlide 1.3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
+
+/* Customer CSV Drag & Drop Styles */
+#tab-customers {
+  transition: background-color 0.2s ease, outline 0.2s ease;
+  border-radius: var(--radius-lg);
+}
+#tab-customers.is-dragover {
+  outline: 3px dashed var(--umber);
+  outline-offset: 4px;
+  background: rgba(247, 195, 104, 0.14);
+}
+label#importCsvBtn {
+  cursor: pointer;
+  user-select: none;
+}

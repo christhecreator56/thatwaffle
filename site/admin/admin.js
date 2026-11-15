@@ -1640,7 +1640,11 @@
   $('csvFormatCloseBtn').addEventListener('click', closeCsvFormatModal);
   $('modalImportCsvBtn').addEventListener('click', function () {
     closeCsvFormatModal();
-    $('csvFileInput').click();
+    var inp = $('csvFileInput');
+    if (inp) {
+      inp.value = '';
+      inp.click();
+    }
   });
   $('downloadSampleCsvBtn').addEventListener('click', downloadSampleCsv);
   $('copyCsvTemplateBtn').addEventListener('click', copyCsvTemplate);
@@ -1648,90 +1652,179 @@
     if (ev.target === $('csvFormatModal')) closeCsvFormatModal();
   });
 
-  $('importCsvBtn').addEventListener('click', function () { $('csvFileInput').click(); });
-  $('csvFileInput').addEventListener('change', function () {
-    var file = this.files[0];
+  function processCsvFile(file) {
     if (!file) return;
+
+    showActionLoader('Reading contacts...', 'Processing CSV file: ' + file.name);
+
     var reader = new FileReader();
+    reader.onerror = function () {
+      hideActionLoader();
+      toast('Could not read the file. Please check file permissions or try again.');
+    };
     reader.onload = function (e) {
-      var lines = e.target.result.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
-      if (!lines.length) return toast('The selected file is empty.');
-
-      var nameIdx = 0, phoneIdx = 1, startLine = 0;
-      var firstRow = parseCsvLine(lines[0]);
-      var isHeader = false;
-
-      firstRow.forEach(function (col, idx) {
-        var lower = col.toLowerCase().replace(/[^a-z]/g, '');
-        if (lower.indexOf('phone') !== -1 || lower.indexOf('mobile') !== -1 || lower.indexOf('whatsapp') !== -1 || lower.indexOf('contact') !== -1) {
-          phoneIdx = idx;
-          isHeader = true;
-        } else if (lower.indexOf('name') !== -1 || lower.indexOf('customer') !== -1) {
-          nameIdx = idx;
-          isHeader = true;
+      try {
+        var text = e.target.result || '';
+        var lines = text.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
+        if (!lines.length) {
+          hideActionLoader();
+          return toast('The selected file is empty.');
         }
-      });
-      if (isHeader) startLine = 1;
 
-      var phoneMap = new Map();
-      var skippedCount = 0;
+        var firstRow = parseCsvLine(lines[0]);
+        var nameIdx = -1, phoneIdx = -1, startLine = 0;
+        var isHeader = false;
 
-      for (var i = startLine; i < lines.length; i++) {
-        var parts = parseCsvLine(lines[i]);
-        if (!parts.length || (parts.length === 1 && !parts[0])) continue;
+        firstRow.forEach(function (col, idx) {
+          var lower = col.toLowerCase().replace(/[^a-z]/g, '');
+          if (lower.indexOf('phone') !== -1 || lower.indexOf('mobile') !== -1 || lower.indexOf('whatsapp') !== -1 || lower.indexOf('contact') !== -1 || lower.indexOf('cell') !== -1 || lower.indexOf('number') !== -1) {
+            phoneIdx = idx;
+            isHeader = true;
+          } else if (lower.indexOf('name') !== -1 || lower.indexOf('customer') !== -1 || lower.indexOf('client') !== -1 || lower.indexOf('user') !== -1) {
+            nameIdx = idx;
+            isHeader = true;
+          }
+        });
 
-        var name = 'Customer';
-        var phoneStr = '';
-
-        if (parts.length > Math.max(nameIdx, phoneIdx)) {
-          name = parts[nameIdx] || 'Customer';
-          phoneStr = parts[phoneIdx] || '';
-        } else if (parts.length === 1) {
-          phoneStr = parts[0];
+        if (isHeader) {
+          startLine = 1;
+          if (nameIdx === -1 && phoneIdx !== -1) {
+            nameIdx = phoneIdx === 0 ? 1 : 0;
+          }
+          if (phoneIdx === -1 && nameIdx !== -1) {
+            phoneIdx = nameIdx === 0 ? 1 : 0;
+          }
         } else {
-          name = parts[0] || 'Customer';
-          phoneStr = parts[1] || '';
+          // No header row: inspect first row values to detect which column has phone digits
+          var col0Digits = (firstRow[0] || '').replace(/\D/g, '');
+          var col1Digits = (firstRow[1] || '').replace(/\D/g, '');
+
+          if (col0Digits.length >= 10 && col1Digits.length < 10) {
+            phoneIdx = 0;
+            nameIdx = 1;
+          } else {
+            nameIdx = 0;
+            phoneIdx = 1;
+          }
         }
 
-        var digits = phoneStr.replace(/\D/g, '');
-        if (digits.length === 12 && digits.startsWith('91')) digits = digits.slice(2);
-        if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1);
+        var phoneMap = new Map();
+        var skippedCount = 0;
 
-        if (/^[6-9][0-9]{9}$/.test(digits)) {
-          var cleanPhone = '+91' + digits;
-          phoneMap.set(cleanPhone, {
-            name: name,
-            phone: cleanPhone,
-            is_subscribed: true,
-            source: 'import'
-          });
-        } else {
-          skippedCount++;
+        for (var i = startLine; i < lines.length; i++) {
+          var parts = parseCsvLine(lines[i]);
+          if (!parts.length || (parts.length === 1 && !parts[0])) continue;
+
+          var name = 'Customer';
+          var phoneStr = '';
+
+          if (parts.length > Math.max(nameIdx, phoneIdx)) {
+            name = (parts[nameIdx] || '').trim();
+            phoneStr = (parts[phoneIdx] || '').trim();
+          } else if (parts.length === 1) {
+            phoneStr = (parts[0] || '').trim();
+          } else {
+            name = (parts[nameIdx === 0 ? 0 : 1] || '').trim();
+            phoneStr = (parts[phoneIdx === 1 ? 1 : 0] || '').trim();
+          }
+
+          if (!name) name = 'Customer';
+
+          var digits = phoneStr.replace(/\D/g, '');
+          if (digits.startsWith('0091')) digits = digits.slice(4);
+          else if (digits.length === 12 && digits.startsWith('91')) digits = digits.slice(2);
+          else if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1);
+
+          if (/^[6-9][0-9]{9}$/.test(digits)) {
+            var cleanPhone = '+91' + digits;
+            phoneMap.set(cleanPhone, {
+              name: name,
+              phone: cleanPhone,
+              is_subscribed: true,
+              source: 'import'
+            });
+          } else {
+            skippedCount++;
+          }
         }
-      }
 
-      var toInsert = Array.from(phoneMap.values());
-      if (!toInsert.length) {
-        return toast('No valid phone numbers found. Click "CSV Format" to view sample.');
-      }
+        var toInsert = Array.from(phoneMap.values());
+        if (!toInsert.length) {
+          hideActionLoader();
+          return toast('No valid 10-digit mobile numbers found. Click "CSV Format" to view sample.');
+        }
 
-      showActionLoader('Importing customers...', 'Importing ' + toInsert.length + ' contact' + (toInsert.length === 1 ? '' : 's') + ' into WhatsApp CRM...');
+        showActionLoader('Importing customers...', 'Importing ' + toInsert.length + ' contact' + (toInsert.length === 1 ? '' : 's') + ' into WhatsApp CRM...');
 
-      db.from('customers').upsert(toInsert, { onConflict: 'phone' }).then(function (r) {
-        must(r);
-        var msg = 'Successfully imported ' + toInsert.length + ' customer' + (toInsert.length === 1 ? '' : 's') + '!';
-        if (skippedCount > 0) msg += ' (' + skippedCount + ' invalid row' + (skippedCount === 1 ? '' : 's') + ' skipped)';
-        toast(msg);
-        return loadCustomers();
-      }).catch(function (err) {
-        toast('Import failed: ' + say(err));
-      }).finally(function () {
+        db.from('customers').upsert(toInsert, { onConflict: 'phone' }).then(function (r) {
+          must(r);
+          var msg = 'Successfully imported ' + toInsert.length + ' customer' + (toInsert.length === 1 ? '' : 's') + '!';
+          if (skippedCount > 0) msg += ' (' + skippedCount + ' invalid row' + (skippedCount === 1 ? '' : 's') + ' skipped)';
+          toast(msg);
+          return loadCustomers();
+        }).catch(function (err) {
+          toast('Import failed: ' + say(err));
+        }).finally(function () {
+          hideActionLoader();
+        });
+      } catch (err) {
         hideActionLoader();
-      });
+        console.error('Error processing CSV:', err);
+        toast('Failed to process CSV: ' + say(err));
+      }
     };
     reader.readAsText(file);
-    this.value = '';
-  });
+  }
+
+  var importBtn = $('importCsvBtn');
+  if (importBtn) {
+    importBtn.addEventListener('click', function () {
+      var inp = $('csvFileInput');
+      if (inp) {
+        inp.value = '';
+        if (this.tagName !== 'LABEL') inp.click();
+      }
+    });
+    importBtn.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter' || ev.key === ' ') {
+        ev.preventDefault();
+        var inp = $('csvFileInput');
+        if (inp) {
+          inp.value = '';
+          inp.click();
+        }
+      }
+    });
+  }
+
+  var csvFileInput = $('csvFileInput');
+  if (csvFileInput) {
+    csvFileInput.addEventListener('change', function () {
+      var file = this.files && this.files[0];
+      if (file) processCsvFile(file);
+    });
+  }
+
+  var custTab = $('tab-customers');
+  if (custTab) {
+    custTab.addEventListener('dragover', function (ev) {
+      ev.preventDefault();
+      custTab.classList.add('is-dragover');
+    });
+    custTab.addEventListener('dragleave', function (ev) {
+      if (ev.target === custTab || !custTab.contains(ev.relatedTarget)) {
+        custTab.classList.remove('is-dragover');
+      }
+    });
+    custTab.addEventListener('drop', function (ev) {
+      ev.preventDefault();
+      custTab.classList.remove('is-dragover');
+      var files = ev.dataTransfer && ev.dataTransfer.files;
+      if (files && files.length) {
+        processCsvFile(files[0]);
+      }
+    });
+  }
 
   /* MENU SECTION */
   function drawItems() {
