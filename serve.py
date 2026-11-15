@@ -842,6 +842,23 @@ class WaffleRequestHandler(http.server.SimpleHTTPRequestHandler):
             if self.command in ('POST', 'PUT', 'PATCH'):
                 content_len = int(self.headers.get('Content-Length', 0))
                 body_bytes = self.rfile.read(content_len)
+                # Safeguard: strip any client-sent fields not present in Supabase 'offers' schema
+                if '/rest/v1/offers' in path and body_bytes:
+                    try:
+                        parsed_json = json.loads(body_bytes.decode('utf-8'))
+                        if isinstance(parsed_json, dict) and 'custom_message' in parsed_json:
+                            del parsed_json['custom_message']
+                            body_bytes = json.dumps(parsed_json).encode('utf-8')
+                        elif isinstance(parsed_json, list):
+                            changed = False
+                            for item in parsed_json:
+                                if isinstance(item, dict) and 'custom_message' in item:
+                                    del item['custom_message']
+                                    changed = True
+                            if changed:
+                                body_bytes = json.dumps(parsed_json).encode('utf-8')
+                    except Exception:
+                        pass
 
             req = urllib.request.Request(upstream_url, data=body_bytes, headers=headers, method=self.command)
             with urllib.request.urlopen(req) as resp:
