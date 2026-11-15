@@ -13,6 +13,10 @@ local_db.json
 *.pem
 *.key
 *.cert
+*.db
+*.log
+sync_agent/sync_queue.db
+sync_agent/sync_agent.log
 
 # Python cache & virtual environments
 __pycache__/

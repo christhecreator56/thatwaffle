@@ -35,6 +35,7 @@
       <button type="button" class="tab" data-tab="menu" aria-pressed="false">Menu</button>
       <button type="button" class="tab" data-tab="customers" aria-pressed="false">Customers</button>
       <button type="button" class="tab" data-tab="hours" aria-pressed="false">Hours</button>
+      <button type="button" class="tab" data-tab="sync" aria-pressed="false">Live Sync</button>
     </nav>
     <button type="button" class="top__out" id="logout">Log out</button>
   </header>
@@ -698,6 +699,10 @@
         <div class="row"><button class="twp-btn" type="submit">Save hours</button></div>
       </form>
     </section>
+
+    <section id="tab-sync" hidden>
+      <!-- Populated dynamically by sync_live.js -->
+    </section>
   </main>
 </div>
 
@@ -807,6 +812,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="/config.js"></script>
-<script src="/admin/admin.js?v=18"></script>
+<script src="/site/sync_live.js"></script>
+<script src="/admin/admin.js?v=19"></script>
 </body>
 </html>

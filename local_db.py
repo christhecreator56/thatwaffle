@@ -18,15 +18,22 @@ def load_db():
         initial = {
             "customers": [],
             "broadcasts": [],
-            "broadcast_logs": []
+            "broadcast_logs": [],
+            "synced_records": [],
+            "sync_devices": [],
+            "sync_logs": []
         }
         save_db(initial)
         return initial
     try:
         with open(DB_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            data = json.load(f)
+            for k in ("synced_records", "sync_devices", "sync_logs"):
+                if k not in data:
+                    data[k] = []
+            return data
     except Exception:
-        return {"customers": [], "broadcasts": [], "broadcast_logs": []}
+        return {"customers": [], "broadcasts": [], "broadcast_logs": [], "synced_records": [], "sync_devices": [], "sync_logs": []}
 
 def save_db(data):
     with open(DB_FILE, 'w', encoding='utf-8') as f:
@@ -179,3 +186,146 @@ def handle_rpc(func_name, data):
         save_db(db)
         return 200, found
     return 200, True
+
+def handle_sync_ingest(device_id, sheet_name, sync_version, is_full_sync, records, content_hash=None):
+    """
+    Idempotent batched upsert and safe deletion reconciliation for synced records.
+    """
+    db = load_db()
+    if 'synced_records' not in db:
+        db['synced_records'] = []
+    if 'sync_logs' not in db:
+        db['sync_logs'] = []
+    if 'sync_devices' not in db:
+        db['sync_devices'] = []
+
+    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    # Track / update device
+    device_entry = next((d for d in db['sync_devices'] if d.get('device_id') == device_id), None)
+    if device_entry:
+        device_entry['last_seen_at'] = now_iso
+    else:
+        db['sync_devices'].append({
+            'device_id': device_id or 'unknown-device',
+            'device_name': f"Device {device_id or 'unknown'}",
+            'is_active': True,
+            'last_seen_at': now_iso,
+            'created_at': now_iso
+        })
+
+    upserted_count = 0
+    incoming_row_ids = set()
+
+    for item in records:
+        row_id = str(item.get('row_id') or '').strip()
+        if not row_id:
+            continue
+        incoming_row_ids.add(row_id)
+        row_num = item.get('row_number')
+        row_data = item.get('data') or {}
+        row_hash = item.get('content_hash') or ''
+
+        # Search existing record for (sheet_name, row_id)
+        existing = next(
+            (r for r in db['synced_records'] if r.get('sheet_name') == sheet_name and r.get('row_id') == row_id),
+            None
+        )
+
+        if existing:
+            existing['data'] = row_data
+            existing['row_number'] = row_num
+            existing['content_hash'] = row_hash
+            existing['sync_version'] = sync_version
+            existing['is_deleted'] = False
+            existing['device_id'] = device_id
+            existing['synced_at'] = now_iso
+            upserted_count += 1
+        else:
+            db['synced_records'].append({
+                'id': str(uuid.uuid4()),
+                'sheet_name': sheet_name,
+                'row_id': row_id,
+                'row_number': row_num,
+                'data': row_data,
+                'content_hash': row_hash,
+                'sync_version': sync_version,
+                'is_deleted': False,
+                'device_id': device_id,
+                'created_at': now_iso,
+                'synced_at': now_iso
+            })
+            upserted_count += 1
+
+    # Safe deletion reconciliation: Only if full sync is declared
+    deleted_count = 0
+    if is_full_sync:
+        for r in db['synced_records']:
+            if r.get('sheet_name') == sheet_name and not r.get('is_deleted', False):
+                if r.get('row_id') not in incoming_row_ids:
+                    r['is_deleted'] = True
+                    r['synced_at'] = now_iso
+                    r['sync_version'] = sync_version
+                    deleted_count += 1
+
+    # Log sync event
+    db['sync_logs'].append({
+        'id': str(uuid.uuid4()),
+        'device_id': device_id,
+        'sheet_name': sheet_name,
+        'sync_version': sync_version,
+        'is_full_sync': is_full_sync,
+        'records_count': len(records),
+        'upserted_count': upserted_count,
+        'deleted_count': deleted_count,
+        'content_hash': content_hash,
+        'status': 'success',
+        'created_at': now_iso
+    })
+
+    save_db(db)
+    return upserted_count, deleted_count
+
+def get_sync_status():
+    """
+    Returns high-level status of synchronized sheets and devices.
+    """
+    db = load_db()
+    records = db.get('synced_records', [])
+    devices = db.get('sync_devices', [])
+    logs = db.get('sync_logs', [])
+
+    sheets_summary = {}
+    for r in records:
+        sheet = r.get('sheet_name', 'default')
+        if sheet not in sheets_summary:
+            sheets_summary[sheet] = {
+                'active_records': 0,
+                'deleted_records': 0,
+                'total_records': 0,
+                'last_synced_at': None,
+                'latest_version': 0
+            }
+        sheets_summary[sheet]['total_records'] += 1
+        if r.get('is_deleted', False):
+            sheets_summary[sheet]['deleted_records'] += 1
+        else:
+            sheets_summary[sheet]['active_records'] += 1
+
+        v = r.get('sync_version') or 0
+        if v > sheets_summary[sheet]['latest_version']:
+            sheets_summary[sheet]['latest_version'] = v
+        sync_at = r.get('synced_at')
+        if sync_at and (not sheets_summary[sheet]['last_synced_at'] or sync_at > sheets_summary[sheet]['last_synced_at']):
+            sheets_summary[sheet]['last_synced_at'] = sync_at
+
+    last_log = logs[-1] if logs else None
+
+    return {
+        'status': 'healthy',
+        'sheets': sheets_summary,
+        'total_active_records': sum(s['active_records'] for s in sheets_summary.values()),
+        'devices': devices,
+        'last_sync': last_log
+    }
+

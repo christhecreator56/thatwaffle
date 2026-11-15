@@ -144,7 +144,7 @@
     $('appView').hidden = view !== 'app';
   }
   function tab(name) {
-    ['offers', 'menu', 'customers', 'hours'].forEach(function (t) {
+    ['offers', 'menu', 'customers', 'hours', 'sync'].forEach(function (t) {
       var s = $('tab-' + t);
       if (s) s.hidden = t !== name;
     });
@@ -160,6 +160,11 @@
       else if (t === 'menu') loadItems();
       else if (t === 'customers') loadCustomers();
       else if (t === 'hours') loadHours();
+      else if (t === 'sync' && window.TWPSync) {
+        window.TWPSync.refresh().then(function() {
+          window.TWPSync.renderSyncTab();
+        });
+      }
     });
   });
   [].forEach.call(document.querySelectorAll('[data-cancel]'), function (b) {
@@ -1209,7 +1214,9 @@
     var now = new Date();
     var todayYmd = toYmd(now);
     var activeVal = dpCurrentField === 'start' ? $('o-start').value : $('o-end').value;
-    var minDateYmd = dpCurrentField === 'end' ? ($('o-start').value || todayYmd) : '';
+    // Offers can only start from today onwards (past dates disabled), unless editing an existing offer with an earlier start date
+    var minStart = (editingOffer && editingOffer.starts_on && editingOffer.starts_on < todayYmd) ? editingOffer.starts_on : todayYmd;
+    var minDateYmd = dpCurrentField === 'end' ? ($('o-start').value || todayYmd) : minStart;
 
     if (status) {
       status.textContent = 'Selecting ' + (dpCurrentField === 'start' ? 'Start date' : 'End date');

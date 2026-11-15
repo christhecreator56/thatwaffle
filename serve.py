@@ -35,7 +35,48 @@ ENV_FILE = os.path.join(BASE_DIR, '.env')
 SUPABASE_URL = os.environ.get('SUPABASE_URL', 'https://hdewnmlpuznncvkyxpjn.supabase.co')
 SUPABASE_KEY = os.environ.get('SUPABASE_ANON_KEY', 'sb_publishable_5X5KVusc1uaVCdilCc7MQA_xOl_Xyna')
 
-LOCAL_TABLES = ('customers', 'broadcasts', 'broadcast_logs')
+LOCAL_TABLES = ('customers', 'broadcasts', 'broadcast_logs', 'synced_records', 'sync_devices', 'sync_logs')
+
+# Sync Agent Device Authentication & Ingestion Constants
+DEFAULT_SYNC_DEV_KEY = 'twp_sync_device_secret_key_2026'
+_SYNC_RATE_LIMIT_CACHE = {} # client_id -> list of unix timestamps
+
+def get_valid_sync_keys():
+    dotenv = _read_dotenv()
+    raw = os.environ.get('SYNC_DEVICE_KEYS') or dotenv.get('SYNC_DEVICE_KEYS') or ''
+    keys = set()
+    if raw:
+        for k in raw.split(','):
+            k = k.strip()
+            if k:
+                keys.add(k)
+    keys.add(DEFAULT_SYNC_DEV_KEY)
+    return keys
+
+def check_sync_rate_limit(client_id, max_requests=30, window_seconds=60):
+    now = time.time()
+    cutoff = now - window_seconds
+    timestamps = _SYNC_RATE_LIMIT_CACHE.get(client_id, [])
+    timestamps = [t for t in timestamps if t > cutoff]
+    if len(timestamps) >= max_requests:
+        _SYNC_RATE_LIMIT_CACHE[client_id] = timestamps
+        retry_after = max(1, int(window_seconds - (now - timestamps[0])))
+        return False, retry_after
+    timestamps.append(now)
+    _SYNC_RATE_LIMIT_CACHE[client_id] = timestamps
+    return True, 0
+
+def verify_sync_device_auth(headers):
+    valid_keys = get_valid_sync_keys()
+    device_key = headers.get('X-Device-Key', '').strip()
+    if device_key and device_key in valid_keys:
+        return True, device_key
+    auth = headers.get('Authorization', '').strip()
+    if auth.startswith('Bearer '):
+        token = auth[7:].strip()
+        if token and token in valid_keys:
+            return True, token
+    return False, None
 
 def _read_dotenv():
     vals = {}
@@ -551,7 +592,7 @@ class WaffleRequestHandler(http.server.SimpleHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization, apikey, Prefer, x-upsert, cache-control')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization, apikey, Prefer, x-upsert, cache-control, X-Device-Key, X-Device-Id')
         self.end_headers()
 
     def handle_storage_upload(self):
@@ -722,6 +763,183 @@ class WaffleRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.send_header('Content-Length', str(len(resp_data)))
+            self.end_headers()
+            self.wfile.write(resp_data)
+            return
+
+        if path == '/api/sync/ingest':
+            content_len = int(self.headers.get('Content-Length', 0))
+            if content_len > 10 * 1024 * 1024:
+                res = {"success": False, "error": "Payload size exceeds maximum allowed 10MB limit."}
+                resp_data = json.dumps(res).encode('utf-8')
+                self.send_response(413)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(resp_data)))
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(resp_data)
+                return
+
+            client_ip = self.client_address[0]
+            dev_header = self.headers.get('X-Device-Id', '').strip()
+            rate_limit_id = dev_header or client_ip
+
+            allowed, retry_after = check_sync_rate_limit(rate_limit_id, max_requests=30, window_seconds=60)
+            if not allowed:
+                res = {
+                    "success": False,
+                    "error": "Rate limit exceeded. Maximum 30 sync requests per minute.",
+                    "retry_after": retry_after
+                }
+                resp_data = json.dumps(res).encode('utf-8')
+                self.send_response(429)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Retry-After', str(retry_after))
+                self.send_header('Content-Length', str(len(resp_data)))
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(resp_data)
+                return
+
+            is_auth, _ = verify_sync_device_auth(self.headers)
+            if not is_auth:
+                res = {"success": False, "error": "Unauthorized: Invalid or missing X-Device-Key or Bearer token."}
+                resp_data = json.dumps(res).encode('utf-8')
+                self.send_response(401)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(resp_data)))
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(resp_data)
+                return
+
+            body = self.rfile.read(content_len).decode('utf-8')
+            try:
+                data = json.loads(body) if body else {}
+            except Exception as e:
+                res = {"success": False, "error": f"Malformed JSON payload: {str(e)}"}
+                resp_data = json.dumps(res).encode('utf-8')
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(resp_data)))
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(resp_data)
+                return
+
+            sheet_name = data.get('sheet_name')
+            sync_version = data.get('sync_version')
+            records = data.get('records')
+            is_full_sync = data.get('is_full_sync', True)
+            content_hash = data.get('content_hash')
+            device_id = data.get('device_id') or dev_header or 'unknown-device'
+
+            if not sheet_name or not isinstance(sheet_name, str):
+                res = {"success": False, "error": "Field 'sheet_name' is required and must be a string."}
+                resp_data = json.dumps(res).encode('utf-8')
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(resp_data)))
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(resp_data)
+                return
+
+            if sync_version is None or not isinstance(sync_version, (int, float)):
+                res = {"success": False, "error": "Field 'sync_version' is required and must be a numeric timestamp or sequence."}
+                resp_data = json.dumps(res).encode('utf-8')
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(resp_data)))
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(resp_data)
+                return
+
+            if records is None or not isinstance(records, list):
+                res = {"success": False, "error": "Field 'records' is required and must be an array of objects."}
+                resp_data = json.dumps(res).encode('utf-8')
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(resp_data)))
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(resp_data)
+                return
+
+            for item in records:
+                if not isinstance(item, dict) or not str(item.get('row_id') or '').strip():
+                    res = {"success": False, "error": "Every item in 'records' must have a non-empty string 'row_id'."}
+                    resp_data = json.dumps(res).encode('utf-8')
+                    self.send_response(400)
+                    self.send_header('Content-Type', 'application/json')
+                    self.send_header('Content-Length', str(len(resp_data)))
+                    self.send_header('Access-Control-Allow-Origin', '*')
+                    self.end_headers()
+                    self.wfile.write(resp_data)
+                    return
+
+            upserted, deleted = local_db.handle_sync_ingest(
+                device_id=device_id,
+                sheet_name=sheet_name,
+                sync_version=sync_version,
+                is_full_sync=is_full_sync,
+                records=records,
+                content_hash=content_hash
+            )
+
+            # Upstream sync to Supabase if service role key exists
+            dotenv = _read_dotenv()
+            service_role_key = os.environ.get('SUPABASE_SERVICE_ROLE_KEY') or dotenv.get('SUPABASE_SERVICE_ROLE_KEY')
+            if service_role_key and SUPABASE_URL:
+                try:
+                    upstream_url = f"{SUPABASE_URL}/rest/v1/synced_records"
+                    sb_records = []
+                    now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                    for r in records:
+                        sb_records.append({
+                            "sheet_name": sheet_name,
+                            "row_id": str(r.get('row_id')),
+                            "row_number": r.get('row_number'),
+                            "data": r.get('data') or {},
+                            "content_hash": r.get('content_hash') or '',
+                            "sync_version": sync_version,
+                            "is_deleted": False,
+                            "device_id": device_id,
+                            "synced_at": now_iso
+                        })
+                    if sb_records:
+                        req_data = json.dumps(sb_records).encode('utf-8')
+                        sb_req = urllib.request.Request(
+                            upstream_url,
+                            data=req_data,
+                            headers={
+                                "apikey": service_role_key,
+                                "Authorization": f"Bearer {service_role_key}",
+                                "Content-Type": "application/json",
+                                "Prefer": "resolution=merge-duplicates"
+                            },
+                            method="POST"
+                        )
+                        urllib.request.urlopen(sb_req, timeout=5)
+                except Exception as ex:
+                    print(f"[SYNC UPSTREAM NOTICE] Upstream Supabase mirror skipped ({ex}); local persistence safe.", flush=True)
+
+            res = {
+                "success": True,
+                "sheet_name": sheet_name,
+                "sync_version": sync_version,
+                "records_received": len(records),
+                "upserted": upserted,
+                "deletions_reconciled": deleted,
+                "synced_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                "message": f"Successfully ingested {upserted} records ({deleted} deletions reconciled) for sheet '{sheet_name}'."
+            }
+            resp_data = json.dumps(res).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(resp_data)))
+            self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(resp_data)
             return
@@ -1737,6 +1955,17 @@ class WaffleRequestHandler(http.server.SimpleHTTPRequestHandler):
                 "endpoint": "/api/dispatch-broadcast",
                 "note": "Trigger campaign dispatches by sending a POST request with {'broadcast_id': 'uuid'}."
             }
+            resp_data = json.dumps(status_obj, indent=2).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(resp_data)))
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(resp_data)
+            return
+
+        if path == '/api/sync/status':
+            status_obj = local_db.get_sync_status()
             resp_data = json.dumps(status_obj, indent=2).encode('utf-8')
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')

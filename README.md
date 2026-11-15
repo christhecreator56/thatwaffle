@@ -36,6 +36,15 @@ Official web application, brand design system, and automated WhatsApp marketing 
    - Automatic customer opt-out handling (when customers reply `STOP` or `UNSUBSCRIBE`).
    - Resilient local database engine (`local_db.json`) with zero external dependency requirement.
 
+4. **Windows Excel Live Sync Subsystem (`sync_agent/` & `EXCEL_SYNC_GUIDE.md`)**:
+   - Continuous, one-way synchronization streaming records from local Windows `.xlsx` workbooks into Supabase & the website.
+   - Source workbook is strictly read-only and never modified.
+   - Automatic debounce, file stability checks, and Excel lock file (`~$*`) filtering.
+   - Persistent offline retry queue in local SQLite with exponential backoff.
+   - Idempotent upserts, permanent row IDs, and safe deletion reconciliation.
+   - Live sync status badge and Realtime listener in Admin Studio.
+   - Automated Windows Task Scheduler scripts (`setup_task.ps1`, `install.bat`).
+
 ---
 
 ## 🚀 Quickstart
@@ -96,10 +105,15 @@ thatwaffle/
 │   └── uploads/              # Uploaded media (posters, banners)
 ├── design-system/            # Brand design system, SVG badges, and component previews
 ├── local_db.py               # Resilient local database REST & query handler
-├── local_db.json             # Database storage (customers, broadcasts, logs)
+├── local_db.json             # Database storage (customers, broadcasts, logs, synced_records)
 ├── serve.py                  # High-performance Python server, scheduler & Meta API dispatcher
+├── sync_agent/               # Windows Excel Live Sync client agent
+├── sample_data/              # Sample Excel workbooks for testing
+├── tests/                    # Automated unit & integration test suites
 ├── supabase/
-│   └── schema.sql            # Optional cloud PostgreSQL schema with Row-Level Security
+│   ├── schema.sql            # Base website PostgreSQL schema
+│   └── sync_schema.sql       # Excel synced records, RLS policies & Realtime publication
+├── EXCEL_SYNC_GUIDE.md       # Comprehensive Excel live sync architecture and setup guide
 ├── .env.example              # Production environment variables template
 ├── whatsapp.local.example.json # Local WhatsApp credentials template
 └── .gitignore                # Enterprise-grade secret and artifact protection
