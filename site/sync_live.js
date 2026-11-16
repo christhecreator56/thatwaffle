@@ -174,16 +174,27 @@
     }
     if (!badge) return;
 
-    var isLive = state.connected || (state.totalRecords > 0 && !state.lastError);
-    var dotCls = isLive ? 'dot--live' : (state.connecting ? 'dot--reconnecting' : 'dot--offline');
-    var statusText = isLive 
-      ? 'Live Sync: ' + state.totalRecords + ' Customers (' + formatTime(state.lastSync) + ')' 
-      : (state.connecting ? 'Reconnecting...' : 'Sync Offline (' + (state.lastError || 'offline') + ')');
+    var dotCls = 'dot--live';
+    var statusText = 'Excel Live Sync: Ready';
+
+    if (!state.connected && state.lastError) {
+      dotCls = 'dot--offline';
+      statusText = 'Excel Sync: Offline';
+    } else if (state.connecting) {
+      dotCls = 'dot--reconnecting';
+      statusText = 'Excel Sync: Connecting...';
+    } else if (state.totalRecords > 0) {
+      dotCls = 'dot--live';
+      statusText = 'Excel Live: ' + state.totalRecords + ' Customers';
+    } else {
+      dotCls = 'dot--live';
+      statusText = 'Excel Live Sync: Ready';
+    }
 
     badge.innerHTML = 
       '<button type="button" class="twp-sync-badge-btn" title="Click to view Excel Live Sync details">' +
         '<span class="twp-sync-dot ' + dotCls + '" aria-hidden="true"></span>' +
-        '<span class="twp-sync-label">' + statusText + '</span>' +
+        '<span class="twp-sync-label">' + esc(statusText) + '</span>' +
       '</button>';
 
     badge.onclick = function () {

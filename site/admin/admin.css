@@ -2295,52 +2295,70 @@ label#importCsvBtn {
   user-select: none;
 }
 
-/* Excel Live Sync Styles */
-.twp-sync-badge {
-  display: inline-flex;
-  align-items: center;
-  margin-left: auto;
-  margin-right: 12px;
+/* Excel Live Sync Header Badge */
+.top .twp-sync-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  margin-left: auto !important;
+  margin-right: 12px !important;
 }
-.twp-sync-badge-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--surface);
-  border: 1.5px solid var(--dune);
-  padding: 6px 14px;
-  border-radius: var(--radius-pill);
-  font-family: var(--font-sans);
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--dune);
-  cursor: pointer;
-  box-shadow: 0 2px 0 var(--dune);
-  transition: all 0.15s ease;
+.top .twp-sync-badge-btn,
+button.twp-sync-badge-btn {
+  appearance: none !important;
+  background: #25180f !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.22) !important;
+  padding: 5px 14px !important;
+  min-height: 34px !important;
+  border-radius: var(--radius-pill) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  cursor: pointer !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3) !important;
+  transition: all 0.15s ease !important;
+  font-family: var(--font-sans, "Plus Jakarta Sans", sans-serif) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+  text-transform: none !important;
+  color: #ffffff !important;
 }
-.twp-sync-badge-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 0 var(--dune);
-  background: #fff;
+.top .twp-sync-badge-btn:hover,
+button.twp-sync-badge-btn:hover {
+  background: #3b2818 !important;
+  border-color: rgba(255, 255, 255, 0.45) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4) !important;
+}
+.top .twp-sync-label,
+.twp-sync-badge-btn .twp-sync-label {
+  font-family: var(--font-sans, "Plus Jakarta Sans", sans-serif) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+  text-transform: none !important;
+  color: #ffffff !important;
+  line-height: 1 !important;
 }
 .twp-sync-dot {
-  width: 9px;
-  height: 9px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   display: inline-block;
+  flex-shrink: 0;
 }
 .twp-sync-dot.dot--live {
   background: #10b981;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
   animation: syncPulseDot 2s infinite ease-in-out;
 }
 .twp-sync-dot.dot--reconnecting {
   background: #f59e0b;
-  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25);
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
 }
 .twp-sync-dot.dot--offline {
   background: #ef4444;
-  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25);
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3);
 }
 @keyframes syncPulseDot {
   0%, 100% { transform: scale(1); opacity: 1; }
