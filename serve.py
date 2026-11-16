@@ -78,6 +78,81 @@ def verify_sync_device_auth(headers):
             return True, token
     return False, None
 
+def _sync_workbook_file(wb_abs_path):
+    """
+    Reads an Excel file using the configured sheets and ingests it into local_db.
+    Returns (total_upserted, total_deleted, details).
+    """
+    if BASE_DIR not in sys.path:
+        sys.path.insert(0, BASE_DIR)
+    try:
+        from sync_agent.excel_reader import read_all_configured_sheets
+    except Exception as e:
+        print(f"[EXCEL SYNC ERROR] Could not import read_all_configured_sheets: {e}", flush=True)
+        return 0, 0, []
+
+    cfg_path = os.path.join(BASE_DIR, 'sync_agent', 'config.json')
+    sheets_config = [
+        {
+            "sheet_name": "Customers",
+            "primary_key": "auto",
+            "header_row": 1,
+            "data_start_row": 2,
+            "columns": {
+                "Customer Name": "name",
+                "Name": "name",
+                "Full Name": "name",
+                "Client": "name",
+                "Mobile Number": "phone",
+                "Mobile": "phone",
+                "Phone": "phone",
+                "Phone Number": "phone",
+                "WhatsApp": "phone",
+                "Contact": "phone",
+                "Notes": "notes"
+            }
+        }
+    ]
+    if os.path.exists(cfg_path):
+        try:
+            with open(cfg_path, 'r', encoding='utf-8') as cf:
+                cfg_data = json.load(cf)
+                if cfg_data.get('sheets'):
+                    sheets_config = cfg_data['sheets']
+        except Exception:
+            pass
+
+    results = read_all_configured_sheets(wb_abs_path, sheets_config)
+    total_upserted = 0
+    total_deleted = 0
+    now_ts = int(time.time() * 1000)
+    sheet_details = []
+
+    for res in results:
+        sheet_name = res["sheet_name"]
+        records = res["records"]
+        content_hash = res["content_hash"]
+        if not records and any("not found in workbook" in w for w in res.get("warnings", [])):
+            continue
+        up, de = local_db.handle_sync_ingest(
+            device_id="site-live-connector",
+            sheet_name=sheet_name,
+            sync_version=now_ts,
+            is_full_sync=True,
+            records=records,
+            content_hash=content_hash
+        )
+        total_upserted += up
+        total_deleted += de
+        sheet_details.append({
+            "sheet_name": sheet_name,
+            "records": len(records),
+            "upserted": up,
+            "deleted": de
+        })
+
+    return total_upserted, total_deleted, sheet_details
+
 def _read_dotenv():
     vals = {}
     if os.path.exists(ENV_FILE):
@@ -588,6 +663,13 @@ class WaffleRequestHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=BASE_DIR, **kwargs)
 
+    def end_headers(self):
+        if hasattr(self, 'path') and any(self.path.endswith(ext) for ext in ('.js', '.css', '.html', '/admin', '/admin/')):
+            self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            self.send_header('Pragma', 'no-cache')
+            self.send_header('Expires', '0')
+        super().end_headers()
+
     def do_OPTIONS(self):
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
@@ -983,8 +1065,238 @@ class WaffleRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(resp_data)
             return
 
+        if path == '/api/sync/upload-excel':
+            content_len = int(self.headers.get('Content-Length', 0))
+            if content_len == 0:
+                res = {"success": False, "error": "No file uploaded. Please select an .xlsx workbook."}
+                resp_data = json.dumps(res).encode('utf-8')
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(resp_data)))
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(resp_data)
+                return
+
+            raw_bytes = self.rfile.read(content_len)
+            
+            # Find PK\x03\x04 zip header
+            pk_pos = raw_bytes.find(b'PK\x03\x04')
+            if pk_pos == -1:
+                res = {"success": False, "error": "Invalid format: File is not a valid Excel (.xlsx) workbook."}
+                resp_data = json.dumps(res).encode('utf-8')
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(resp_data)))
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(resp_data)
+                return
+
+            excel_bytes = raw_bytes[pk_pos:]
+            # If multipart boundary exists at the end, find and strip it
+            boundary_marker = b'\r\n--'
+            if boundary_marker in excel_bytes:
+                last_boundary = excel_bytes.rfind(boundary_marker)
+                eocd_pos = excel_bytes.rfind(b'PK\x05\x06')
+                if eocd_pos != -1:
+                    excel_bytes = excel_bytes[:eocd_pos + 22]
+                elif last_boundary > 0:
+                    excel_bytes = excel_bytes[:last_boundary]
+
+            raw_filename = self.headers.get('X-Filename', 'Uploaded_Customers.xlsx')
+            clean_filename = urllib.parse.unquote(raw_filename).replace('/', '_').replace('\\', '_')
+            if not clean_filename.lower().endswith('.xlsx'):
+                clean_filename += '.xlsx'
+
+            dest_path = os.path.normpath(os.path.join(BASE_DIR, 'sample_data', 'Live_Customers.xlsx'))
+            backup_path = os.path.normpath(os.path.join(BASE_DIR, 'sample_data', 'Customers.xlsx'))
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+            with open(dest_path, 'wb') as f:
+                f.write(excel_bytes)
+            with open(backup_path, 'wb') as f:
+                f.write(excel_bytes)
+
+            # Update sync_agent config.json to point to this uploaded workbook
+            cfg_path = os.path.join(BASE_DIR, 'sync_agent', 'config.json')
+            if os.path.exists(cfg_path):
+                try:
+                    with open(cfg_path, 'r', encoding='utf-8') as cf:
+                        cfg_data = json.load(cf)
+                    cfg_data['workbook_path'] = "../sample_data/Live_Customers.xlsx"
+                    with open(cfg_path, 'w', encoding='utf-8') as cf:
+                        json.dump(cfg_data, cf, indent=2)
+                except Exception as ex:
+                    print(f"[CONFIG UPDATE NOTICE] {ex}", flush=True)
+
+            upserted, deleted, details = _sync_workbook_file(dest_path)
+
+            res = {
+                "success": True,
+                "filename": clean_filename,
+                "saved_as": "Live_Customers.xlsx",
+                "path": dest_path,
+                "total_records": upserted,
+                "deleted_reconciled": deleted,
+                "sheets": details,
+                "message": f"Successfully connected '{clean_filename}' live! Synced {upserted} customer rows."
+            }
+            resp_data = json.dumps(res).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(resp_data)))
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(resp_data)
+            return
+
+        if path == '/api/sync/connect-path':
+            content_len = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_len).decode('utf-8')
+            try:
+                data = json.loads(body) if body else {}
+            except Exception:
+                data = {}
+
+            target_path = str(data.get('path', '')).strip().strip('"').strip("'")
+            if not target_path:
+                res = {"success": False, "error": "File path cannot be empty."}
+                resp_data = json.dumps(res).encode('utf-8')
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(resp_data)))
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(resp_data)
+                return
+
+            norm_path = os.path.normpath(target_path)
+            if not os.path.exists(norm_path):
+                res = {"success": False, "error": f"File does not exist on this PC: {norm_path}"}
+                resp_data = json.dumps(res).encode('utf-8')
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(resp_data)))
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(resp_data)
+                return
+
+            if not norm_path.lower().endswith('.xlsx'):
+                res = {"success": False, "error": "Only Excel .xlsx workbooks are supported."}
+                resp_data = json.dumps(res).encode('utf-8')
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(resp_data)))
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(resp_data)
+                return
+
+            # Update sync_agent config.json to watch this target path
+            cfg_path = os.path.join(BASE_DIR, 'sync_agent', 'config.json')
+            if os.path.exists(cfg_path):
+                try:
+                    with open(cfg_path, 'r', encoding='utf-8') as cf:
+                        cfg_data = json.load(cf)
+                    cfg_data['workbook_path'] = norm_path
+                    with open(cfg_path, 'w', encoding='utf-8') as cf:
+                        json.dump(cfg_data, cf, indent=2)
+                except Exception as ex:
+                    print(f"[CONFIG UPDATE NOTICE] {ex}", flush=True)
+
+            upserted, deleted, details = _sync_workbook_file(norm_path)
+
+            res = {
+                "success": True,
+                "path": norm_path,
+                "filename": os.path.basename(norm_path),
+                "total_records": upserted,
+                "deleted_reconciled": deleted,
+                "sheets": details,
+                "message": f"Connected '{os.path.basename(norm_path)}' live! Synced {upserted} customer rows."
+            }
+            resp_data = json.dumps(res).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(resp_data)))
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(resp_data)
+            return
+
+        if path == '/api/sync/sync-now':
+            cfg_path = os.path.join(BASE_DIR, 'sync_agent', 'config.json')
+            wb_path = None
+            if os.path.exists(cfg_path):
+                try:
+                    with open(cfg_path, 'r', encoding='utf-8') as cf:
+                        cfg_data = json.load(cf)
+                    raw_wb = cfg_data.get('workbook_path')
+                    if raw_wb:
+                        wb_path = os.path.normpath(os.path.join(os.path.dirname(cfg_path), raw_wb)) if not os.path.isabs(raw_wb) else os.path.normpath(raw_wb)
+                except Exception:
+                    pass
+
+            if not wb_path or not os.path.exists(wb_path):
+                res = {"success": False, "error": "No connected workbook file found on disk."}
+                resp_data = json.dumps(res).encode('utf-8')
+                self.send_response(400)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(resp_data)))
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(resp_data)
+                return
+
+            upserted, deleted, details = _sync_workbook_file(wb_path)
+            res = {
+                "success": True,
+                "filename": os.path.basename(wb_path),
+                "path": wb_path,
+                "total_records": upserted,
+                "deleted_reconciled": deleted,
+                "sheets": details,
+                "message": f"Re-synced {upserted} records from '{os.path.basename(wb_path)}'!"
+            }
+            resp_data = json.dumps(res).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(resp_data)))
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(resp_data)
+            return
+
         if path == '/api/sync/reset':
-            res = local_db.reset_sync_data()
+            query = urllib.parse.parse_qs(parsed.query)
+            wipe_all = query.get('wipe_all', [''])[0].lower() in ('1', 'true')
+            content_len = int(self.headers.get('Content-Length', 0))
+            if content_len > 0:
+                try:
+                    body = self.rfile.read(content_len).decode('utf-8')
+                    b_data = json.loads(body) if body else {}
+                    if b_data.get('wipe_all') is True:
+                        wipe_all = True
+                except Exception:
+                    pass
+
+            res = local_db.reset_sync_data(keep_counter_customers=not wipe_all)
+
+            # Reset workbook files to empty headers
+            try:
+                import openpyxl
+                for fname in ('Customers.xlsx', 'Live_Customers.xlsx', 'Uploaded_Customers.xlsx'):
+                    p = os.path.join(BASE_DIR, 'sample_data', fname)
+                    if os.path.exists(p):
+                        wb = openpyxl.Workbook()
+                        ws = wb.active
+                        ws.title = 'Customers'
+                        ws.append(['Customer Name', 'Mobile Number', 'City', 'Birthday', 'Favorite Waffle', 'Notes'])
+                        wb.save(p)
+            except Exception as e:
+                print(f"[RESET WORKBOOK NOTICE] {e}", flush=True)
+
             resp_data = json.dumps(res).encode('utf-8')
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
@@ -2023,6 +2335,27 @@ class WaffleRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             self.wfile.write(resp_data)
+            return
+
+        if path == '/api/sync/template':
+            import openpyxl, io
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = 'Customers'
+            ws.append(['Customer Name', 'Mobile Number', 'City', 'Birthday', 'Favorite Waffle', 'Notes'])
+            ws.append(['Priya Sharma', '9876543210', 'Chennai', '1998-05-12', 'Belgian Dark Chocolate', 'Weekly regular'])
+            ws.append(['Karthik R', '9840123456', 'Chennai', '1995-11-20', 'Triple Berry Stack', 'Prefers extra maple syrup'])
+            buf = io.BytesIO()
+            wb.save(buf)
+            buf.seek(0)
+            xlsx_bytes = buf.read()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            self.send_header('Content-Disposition', 'attachment; filename="Customers_Template.xlsx"')
+            self.send_header('Content-Length', str(len(xlsx_bytes)))
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(xlsx_bytes)
             return
 
         if path == '/api/sync/reset':

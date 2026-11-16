@@ -2241,6 +2241,14 @@
   }
 
   var importBtn = $('importCsvBtn');
+  var connectExcelBtn = $('connectExcelBtn');
+  if (connectExcelBtn) {
+    connectExcelBtn.addEventListener('click', function () {
+      var syncTab = document.querySelector('.tab[data-tab="sync"]');
+      if (syncTab) syncTab.click();
+    });
+  }
+
   if (importBtn) {
     importBtn.addEventListener('click', function () {
       var inp = $('csvFileInput');

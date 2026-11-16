@@ -388,17 +388,47 @@ def get_sync_status():
 
     last_log = logs[-1] if logs else None
 
+    # Retrieve connected workbook details from sync_agent/config.json
+    wb_info = {
+        'path': None,
+        'filename': None,
+        'exists': False,
+        'last_modified': None,
+        'size_bytes': 0
+    }
+    cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sync_agent', 'config.json')
+    if os.path.exists(cfg_path):
+        try:
+            with open(cfg_path, 'r', encoding='utf-8') as cf:
+                cfg_data = json.load(cf)
+            raw_wb = cfg_data.get('workbook_path')
+            if raw_wb:
+                if not os.path.isabs(raw_wb):
+                    wb_abs = os.path.normpath(os.path.join(os.path.dirname(cfg_path), raw_wb))
+                else:
+                    wb_abs = os.path.normpath(raw_wb)
+                wb_info['path'] = wb_abs
+                wb_info['filename'] = os.path.basename(wb_abs)
+                if os.path.exists(wb_abs):
+                    wb_info['exists'] = True
+                    wb_info['last_modified'] = datetime.datetime.fromtimestamp(os.path.getmtime(wb_abs)).isoformat()
+                    wb_info['size_bytes'] = os.path.getsize(wb_abs)
+        except Exception:
+            pass
+
     return {
         'status': 'healthy',
         'sheets': sheets_summary,
         'total_active_records': sum(s['active_records'] for s in sheets_summary.values()),
         'devices': devices,
-        'last_sync': last_log
+        'last_sync': last_log,
+        'connected_workbook': wb_info
     }
 
 def reset_sync_data(keep_counter_customers=True):
     """
     Clears all synced records and sync logs to allow connecting Excel live fresh.
+    Also clears SQLite queue and resets workbook rows.
     """
     db = load_db()
     db['synced_records'] = []
@@ -409,6 +439,19 @@ def reset_sync_data(keep_counter_customers=True):
         # Keep non-imported customers (counter opt-ins)
         db['customers'] = [c for c in db.get('customers', []) if c.get('source') != 'import']
     save_db(db)
+
+    # Clean local queue db
+    queue_db = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sync_agent', 'sync_queue.db')
+    if os.path.exists(queue_db):
+        try:
+            import sqlite3
+            conn = sqlite3.connect(queue_db)
+            conn.execute('DELETE FROM sync_queue')
+            conn.commit()
+            conn.close()
+        except Exception:
+            pass
+
     return {"success": True, "message": "Synced records and logs have been reset fresh."}
 
 

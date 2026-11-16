@@ -2514,3 +2514,196 @@ label#importCsvBtn {
   font-size: 11px;
   color: #1b5336;
 }
+
+/* Connect Excel Live Studio & Ingestion Panels */
+.twp-sync-connect-section {
+  background: #fbf7ee;
+  border: 2px solid var(--dune);
+  border-radius: var(--radius-lg);
+  padding: 22px 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 4px 0 var(--dune);
+  font-family: var(--font-sans);
+}
+.twp-sync-connect-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1.5px dashed #dbc9b5;
+}
+.twp-sync-connect-header h2 {
+  font-family: var(--font-sans);
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--dune);
+  letter-spacing: -0.015em;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.twp-sync-active-file-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  background: #ecfdf5;
+  border: 1.5px solid #a7f3d0;
+  border-radius: var(--radius-pill);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #065f46;
+}
+.twp-sync-active-file-tag.is-empty {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  color: #6b7280;
+}
+.twp-sync-methods-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 18px;
+  margin-bottom: 16px;
+}
+.twp-sync-method-card {
+  background: #fff;
+  border: 2px solid #e0d5c3;
+  border-radius: var(--radius-md);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.twp-sync-method-card:hover {
+  border-color: var(--dune);
+  box-shadow: 0 3px 0 var(--dune);
+}
+.twp-sync-method-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--dune);
+}
+.twp-sync-method-desc {
+  font-size: 13px;
+  color: #6d5b4f;
+  line-height: 1.45;
+  margin: 0;
+}
+.twp-sync-dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  border: 2px dashed #bba895;
+  border-radius: var(--radius-md);
+  background: #fdfbf7;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+.twp-sync-dropzone:hover, .twp-sync-dropzone.is-dragover {
+  border-color: #059669;
+  background: #f0fdf4;
+}
+.twp-sync-dropzone-icon {
+  width: 44px;
+  height: 44px;
+  margin-bottom: 8px;
+  color: #059669;
+}
+.twp-sync-dropzone-text {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--dune);
+}
+.twp-sync-dropzone-hint {
+  font-size: 12px;
+  color: #786a5f;
+  margin-top: 4px;
+}
+.twp-sync-path-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.twp-sync-path-input-wrap {
+  display: flex;
+  gap: 8px;
+}
+.twp-sync-path-input {
+  flex: 1;
+  padding: 10px 14px;
+  border: 2px solid #cfc1ae;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  background: #fdfbf7;
+  color: var(--dune);
+  outline: none;
+}
+.twp-sync-path-input:focus {
+  border-color: var(--dune);
+  background: #fff;
+}
+.twp-sync-btn-connect {
+  background: var(--dune);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-pill);
+  padding: 0 16px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s ease;
+}
+.twp-sync-btn-connect:hover {
+  background: #251608;
+}
+.twp-sync-btn-connect:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.twp-sync-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1.5px dashed #dbc9b5;
+}
+.twp-sync-live-msg {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 12px;
+  display: none;
+}
+.twp-sync-live-msg.is-success {
+  display: block;
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+}
+.twp-sync-live-msg.is-error {
+  display: block;
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fca5a5;
+}
+
