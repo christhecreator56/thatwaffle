@@ -145,7 +145,7 @@
     $('appView').hidden = view !== 'app';
   }
   function tab(name) {
-    ['offers', 'menu', 'customers', 'hours', 'sync'].forEach(function (t) {
+    ['offers', 'menu', 'customers', 'hours'].forEach(function (t) {
       var s = $('tab-' + t);
       if (s) s.hidden = t !== name;
     });
@@ -161,11 +161,6 @@
       else if (t === 'menu') loadItems();
       else if (t === 'customers') loadCustomers();
       else if (t === 'hours') loadHours();
-      else if (t === 'sync' && window.TWPSync) {
-        window.TWPSync.refresh().then(function() {
-          window.TWPSync.renderSyncTab();
-        });
-      }
     });
   });
   [].forEach.call(document.querySelectorAll('[data-cancel]'), function (b) {
@@ -589,20 +584,20 @@
         extraBtns.push(quickB);
       }
 
-      // Direct WhatsApp broadcast to all Excel customers
+      // Direct WhatsApp broadcast to all customers
       var broadcastBtn = el('button', 'acts__primary', 'WhatsApp to Customers');
       broadcastBtn.type = 'button';
-      broadcastBtn.title = 'Send this offer via WhatsApp to all customers synced from Excel';
+      broadcastBtn.title = 'Send this offer via WhatsApp to all subscribed customers';
       broadcastBtn.addEventListener('click', function () {
         var subList = customers.filter(function (c) { return c.is_subscribed; });
         var subCount = subList.length;
         if (subCount === 0) {
-          toast('No subscribed customers found in CRM. Sync your Excel file or add customers first.');
+          toast('No subscribed customers found in CRM. Add customers or import a CSV first.');
           return;
         }
         askConfirm({
-          title: 'Broadcast Offer to Excel Customers?',
-          message: 'Send "' + o.name + '" (' + o.discount + ') via WhatsApp to ' + subCount + ' customers synced from Excel right now?',
+          title: 'Broadcast Offer to Customers?',
+          message: 'Send "' + o.name + '" (' + o.discount + ') via WhatsApp to ' + subCount + ' subscribed customer(s) right now?',
           confirmText: 'Send to ' + subCount + ' Customers',
           tone: 'wa'
         }).then(function (ok) {
@@ -628,7 +623,7 @@
             });
           }).then(function (r) { return r.json(); }).then(function (res) {
             if (res.error) throw new Error(res.error);
-            toast('Offer sent to ' + (res.sent || subCount) + ' Excel customers successfully!');
+            toast('Offer sent to ' + (res.sent || subCount) + ' customer(s) successfully!');
             loadOffers();
           }).catch(function (e) {
             toast('Broadcast error: ' + e.message);
@@ -1893,7 +1888,7 @@
     if (!set.length) list.appendChild(el('li', 'empty', 'No customers found.'));
 
     set.forEach(function (c) {
-      var sourceLbl = (c.source === 'import' ? 'Excel Synced' : (c.source || 'website'));
+      var sourceLbl = (c.source === 'import' ? 'CSV Import' : (c.source || 'website'));
       var pills = [
         { text: c.is_subscribed ? 'Active' : 'Unsubscribed', on: c.is_subscribed },
         { text: sourceLbl, cls: 'pill' }
@@ -1942,11 +1937,11 @@
     if (waRecips) {
       var subList = customers.filter(function (c) { return c.is_subscribed; });
       if (!subList.length) {
-        waRecips.innerHTML = '<em>No active customers in CRM yet. Add rows in your Excel file to sync!</em>';
+        waRecips.innerHTML = '<em>No active customers in CRM yet. Import a CSV or add customers!</em>';
       } else {
         var names = subList.slice(0, 4).map(function (c) { return (c.name || 'Customer') + ' (' + c.phone + ')'; }).join(', ');
         if (subList.length > 4) names += ', +' + (subList.length - 4) + ' more';
-        waRecips.innerHTML = '<b>' + subList.length + ' Excel recipients ready:</b> ' + names;
+        waRecips.innerHTML = '<b>' + subList.length + ' recipients ready:</b> ' + names;
       }
     }
   }
@@ -2177,7 +2172,7 @@
     if (!file) return;
 
     if (file.name && file.name.match(/\.xlsx?$|\.xlsm$/i)) {
-      return toast('This is an Excel spreadsheet (.xlsx). Click "Connect Excel Live" to sync directly, or export it as .CSV.');
+      return toast('Please select a .CSV file. If you have an Excel file, save or export it as .CSV first.');
     }
 
     showActionLoader('Reading contacts...', 'Processing CSV file: ' + file.name);
@@ -2272,13 +2267,6 @@
   }
 
   var importBtn = $('importCsvBtn');
-  var connectExcelBtn = $('connectExcelBtn');
-  if (connectExcelBtn) {
-    connectExcelBtn.addEventListener('click', function () {
-      var syncTab = document.querySelector('.tab[data-tab="sync"]');
-      if (syncTab) syncTab.click();
-    });
-  }
 
   if (importBtn) {
     importBtn.addEventListener('click', function () {
