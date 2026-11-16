@@ -13,8 +13,10 @@ def _normalize_phone(raw):
         digits = digits[2:]
     elif digits.startswith('0') and len(digits) == 11:
         digits = digits[1:]
-    if len(digits) == 10 and digits[0] in '6789':
+    if len(digits) == 10:
         return '+91' + digits
+    if len(digits) >= 10:
+        return '+' + digits
     return ('+' + digits) if digits else ''
 
 DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'local_db.json')
@@ -292,7 +294,7 @@ def handle_sync_ingest(device_id, sheet_name, sync_version, is_full_sync, record
                 item.get('row_id')
             )
             phone = _normalize_phone(raw_phone)
-            if re.match(r'^\+91[6-9][0-9]{9}$', phone):
+            if re.match(r'^\+91[0-9]{10}$', phone) or re.match(r'^\+[0-9]{10,15}$', phone):
                 valid_excel_phones.add(phone)
                 name = str(row_data.get('name') or row_data.get('customer_name') or '').strip()
                 if not name or name.lower() == 'none':

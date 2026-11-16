@@ -35,8 +35,10 @@ def _normalize_phone_str(raw):
         digits = digits[2:]
     elif digits.startswith('0') and len(digits) == 11:
         digits = digits[1:]
-    if len(digits) == 10 and digits[0] in '6789':
+    if len(digits) == 10:
         return '+91' + digits
+    if len(digits) >= 10:
+        return '+' + digits
     return ('+' + digits) if digits else str(raw).strip()
 
 def _normalize_cell_value(val):

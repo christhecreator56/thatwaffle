@@ -938,7 +938,7 @@ class WaffleRequestHandler(http.server.SimpleHTTPRequestHandler):
                                 r.get('row_id')
                             )
                             p = local_db._normalize_phone(raw_p)
-                            if re.match(r'^\+91[6-9][0-9]{9}$', p):
+                            if re.match(r'^\+91[0-9]{10}$', p) or re.match(r'^\+[0-9]{10,15}$', p):
                                 nm = str(r_data.get('name') or r_data.get('customer_name') or '').strip()
                                 if not nm or nm.lower() == 'none':
                                     nm = 'Customer'

@@ -1531,11 +1531,11 @@
       return ($('o-end-trigger') || $('o-end')).focus();
     }
     var rawPhone = $('testPhone').value.trim().replace(/\D/g, '');
-    if (!/^[6-9][0-9]{9}$/.test(rawPhone)) {
+    if (!/^[0-9]{10}$/.test(rawPhone) && !/^[0-9]{11,15}$/.test(rawPhone)) {
       testMsg.textContent = 'Enter a valid 10-digit mobile number.';
       return $('testPhone').focus();
     }
-    var phone = '+91' + rawPhone;
+    var phone = rawPhone.length === 10 ? ('+91' + rawPhone) : ('+' + rawPhone);
     this.disabled = true;
     testMsg.textContent = 'Sending test to ' + phone + '...';
 
@@ -2005,12 +2005,12 @@
     msg.textContent = '';
 
     if (!name) return $('c-name').focus();
-    if (!/^[6-9][0-9]{9}$/.test(rawPhone)) {
+    if (!/^[0-9]{10}$/.test(rawPhone) && !/^[0-9]{11,15}$/.test(rawPhone)) {
       msg.textContent = 'Enter a valid 10-digit mobile number.';
       return $('c-phone').focus();
     }
 
-    var phone = '+91' + rawPhone;
+    var phone = rawPhone.length === 10 ? ('+91' + rawPhone) : ('+' + rawPhone);
     setButtonLoading(btn, true, 'Adding customer...');
     showActionLoader('Adding customer...', 'Saving customer details and setting up WhatsApp opt-in...');
 
@@ -2187,12 +2187,20 @@
           if (!name) name = 'Customer';
 
           var digits = phoneStr.replace(/\D/g, '');
-          if (digits.startsWith('0091')) digits = digits.slice(4);
-          else if (digits.length === 12 && digits.startsWith('91')) digits = digits.slice(2);
+          if (digits.startsWith('0091') && digits.length >= 14) digits = digits.slice(4);
+          else if (digits.length >= 12 && digits.startsWith('91')) digits = digits.slice(2);
           else if (digits.length === 11 && digits.startsWith('0')) digits = digits.slice(1);
 
-          if (/^[6-9][0-9]{9}$/.test(digits)) {
+          if (/^[0-9]{10}$/.test(digits)) {
             var cleanPhone = '+91' + digits;
+            phoneMap.set(cleanPhone, {
+              name: name,
+              phone: cleanPhone,
+              is_subscribed: true,
+              source: 'import'
+            });
+          } else if (digits.length >= 11 && digits.length <= 15) {
+            var cleanPhone = '+' + digits;
             phoneMap.set(cleanPhone, {
               name: name,
               phone: cleanPhone,
