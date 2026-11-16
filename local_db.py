@@ -452,6 +452,18 @@ def reset_sync_data(keep_counter_customers=True):
         except Exception:
             pass
 
+    # Disconnect workbook in sync_agent/config.json so it starts un-connected by default
+    cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sync_agent', 'config.json')
+    if os.path.exists(cfg_path):
+        try:
+            with open(cfg_path, 'r', encoding='utf-8') as cf:
+                cfg_data = json.load(cf)
+            cfg_data['workbook_path'] = ""
+            with open(cfg_path, 'w', encoding='utf-8') as cf:
+                json.dump(cfg_data, cf, indent=2)
+        except Exception:
+            pass
+
     return {"success": True, "message": "Synced records and logs have been reset fresh."}
 
 

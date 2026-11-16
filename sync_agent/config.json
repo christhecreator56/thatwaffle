@@ -3,7 +3,7 @@
   "device_key": "twp_sync_device_secret_key_2026",
   "ingest_url": "http://localhost:8080/api/sync/ingest",
   "status_url": "http://localhost:8080/api/sync/status",
-  "workbook_path": "../sample_data/Live_Customers.xlsx",
+  "workbook_path": "",
   "debounce_seconds": 3.0,
   "file_stability_timeout_seconds": 5.0,
   "reconciliation_interval_seconds": 900,

@@ -63,8 +63,7 @@ class AgentConfig:
 
     def validate(self):
         errors = []
-        if not self.workbook_path:
-            errors.append("Missing 'workbook_path'. Must specify path to the .xlsx workbook.")
+        # Note: workbook_path can be empty on startup; agent runs in standby until connected via website UI
         if not self.ingest_url:
             errors.append("Missing 'ingest_url'. Must specify target HTTP/HTTPS ingestion endpoint.")
         if not self.device_key:

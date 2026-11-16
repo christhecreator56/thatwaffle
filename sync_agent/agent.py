@@ -73,6 +73,9 @@ class SyncAgent:
         Returns total number of sheets enqueued.
         """
         wb_path = self.config.workbook_path
+        if not wb_path or not str(wb_path).strip():
+            logger.info("No workbook connected yet. Connect your Excel file through the website UI.")
+            return 0
         if not os.path.exists(wb_path):
             logger.warning(f"Target workbook not found at: {wb_path}. Waiting for file creation...")
             return 0
@@ -178,9 +181,15 @@ class SyncAgent:
 
     def _background_worker(self):
         """
-        Background loop draining queue and triggering periodic reconciliation.
+        Background loop draining queue, hot-reloading workbook path changes from website,
+        and triggering periodic reconciliation.
         """
         last_reconcile = time.time()
+        last_cfg_check = 0
+        cfg_path = getattr(self.config, 'config_file_path', None)
+        if not cfg_path:
+            cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json')
+
         while not self._shutdown_event.is_set():
             try:
                 self.drain_queue_once()
@@ -188,6 +197,43 @@ class SyncAgent:
                 logger.error(f"Error in queue drain worker: {e}", exc_info=True)
 
             now = time.time()
+            # Check for dynamic workbook connection changes from website every 3s
+            if now - last_cfg_check >= 3.0:
+                last_cfg_check = now
+                if os.path.exists(cfg_path):
+                    try:
+                        with open(cfg_path, 'r', encoding='utf-8') as cf:
+                            cdata = json.load(cf)
+                        new_wb = cdata.get('workbook_path', '')
+                        if new_wb and not os.path.isabs(new_wb):
+                            new_wb = os.path.normpath(os.path.join(os.path.dirname(cfg_path), new_wb))
+                        elif new_wb:
+                            new_wb = os.path.normpath(new_wb)
+
+                        current_wb = self.config.workbook_path or ''
+                        if new_wb != current_wb:
+                            logger.info(f"Workbook connection update detected from website: '{new_wb}'")
+                            self.config.workbook_path = new_wb
+                            if self._watcher:
+                                self._watcher.stop()
+                                self._watcher = None
+
+                            if new_wb and os.path.exists(new_wb):
+                                self._watcher = WorkbookWatcher(
+                                    target_filepath=new_wb,
+                                    on_change_callback=self._on_file_changed,
+                                    debounce_seconds=self.config.debounce_seconds,
+                                    stability_timeout=self.config.file_stability_timeout_seconds
+                                )
+                                self._watcher.start()
+                                logger.info(f"Started live file watcher for: {new_wb}")
+                                self.scan_and_enqueue(is_reconciliation=True, reason="website_connect")
+                                self.drain_queue_once()
+                            else:
+                                logger.info("Workbook disconnected. Watcher paused.")
+                    except Exception as ex:
+                        logger.debug(f"Config poll notice: {ex}")
+
             if now - last_reconcile >= self.config.reconciliation_interval_seconds:
                 logger.info("Executing periodic reconciliation scan...")
                 self.scan_and_enqueue(is_reconciliation=True, reason="periodic_reconciliation")
@@ -203,7 +249,7 @@ class SyncAgent:
         logger.info(f"============================================================")
         logger.info(f"That Waffle Place: Windows Excel Live Sync Agent Starting...")
         logger.info(f"Device ID:         {self.config.device_id}")
-        logger.info(f"Workbook Path:     {self.config.workbook_path}")
+        logger.info(f"Workbook Path:     {self.config.workbook_path or '(None - Standby)'}")
         logger.info(f"Ingest URL:        {self.config.ingest_url}")
         logger.info(f"Reconciliation:    Every {self.config.reconciliation_interval_seconds}s")
         logger.info(f"Sheets Configured: {[s.get('sheet_name') for s in self.config.sheets]}")
@@ -214,25 +260,30 @@ class SyncAgent:
         if stats["pending"] > 0:
             logger.info(f"Found {stats['pending']} pending batches in local offline queue from previous session.")
 
-        # 2. Initial sync
-        logger.info("Performing initial startup sync pass...")
-        self.scan_and_enqueue(is_reconciliation=True, reason="startup_initial_sync")
-        self.drain_queue_once()
+        # 2. Initial sync (only if workbook configured)
+        if self.config.workbook_path and os.path.exists(self.config.workbook_path):
+            logger.info("Performing initial startup sync pass...")
+            self.scan_and_enqueue(is_reconciliation=True, reason="startup_initial_sync")
+            self.drain_queue_once()
+        else:
+            logger.info("Agent in Standby: No workbook connected by default. Waiting for connection from website UI.")
 
         # 3. Start background queue worker
         self._worker_thread = threading.Thread(target=self._background_worker, name="QueueWorkerThread", daemon=True)
         self._worker_thread.start()
 
-        # 4. Start file watcher
-        self._watcher = WorkbookWatcher(
-            target_filepath=self.config.workbook_path,
-            on_change_callback=self._on_file_changed,
-            debounce_seconds=self.config.debounce_seconds,
-            stability_timeout=self.config.file_stability_timeout_seconds
-        )
-        self._watcher.start()
-
-        logger.info("Sync Agent active and watching for Excel workbook changes. Press Ctrl+C to stop.")
+        # 4. Start file watcher if workbook configured
+        if self.config.workbook_path and os.path.exists(self.config.workbook_path):
+            self._watcher = WorkbookWatcher(
+                target_filepath=self.config.workbook_path,
+                on_change_callback=self._on_file_changed,
+                debounce_seconds=self.config.debounce_seconds,
+                stability_timeout=self.config.file_stability_timeout_seconds
+            )
+            self._watcher.start()
+            logger.info("Sync Agent active and watching for Excel workbook changes.")
+        else:
+            logger.info("Live watcher idle until a workbook is connected through the website.")
 
     def run_forever(self):
         self.start()

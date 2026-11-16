@@ -616,8 +616,14 @@
       return Promise.all([fetchStatus(), fetchRecords()]);
     },
     init: function () {
-      fetchStatus();
-      fetchRecords();
+      fetchStatus().then(function () {
+        var sec = document.getElementById('tab-sync');
+        if (sec && !sec.hidden) renderSyncTab();
+      });
+      fetchRecords().then(function () {
+        var sec = document.getElementById('tab-sync');
+        if (sec && !sec.hidden) renderSyncTab();
+      });
       initRealtime();
     },
     renderSyncTab: renderSyncTab
