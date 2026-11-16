@@ -103,6 +103,7 @@ thatwaffle/
 │   ├── setup_task.ps1                 # Windows Task Scheduler registration script
 │   └── remove_task.ps1                # Scheduled task removal script
 ├── sample_data/
+│   ├── Customers.xlsx                 # Recommended customer CRM template workbook
 │   └── Menu_Inventory.xlsx            # Multi-sheet sample workbook for verification
 ├── supabase/
 │   ├── schema.sql                     # Base website schema
@@ -122,6 +123,8 @@ thatwaffle/
 
 ## 4. Configuration Guide (`config.json`)
 
+By default, the sync agent is configured for **Customer CRM additions**. Whenever rows are added or edited in your customer spreadsheet, they are automatically normalized and synced into the website's Customers database (`customers`), making them immediately available for WhatsApp campaign broadcasts!
+
 Edit `sync_agent/config.json` to reflect your workbook path, sheet rules, and column mappings:
 
 ```json
@@ -130,7 +133,7 @@ Edit `sync_agent/config.json` to reflect your workbook path, sheet rules, and co
   "device_key": "twp_sync_device_secret_key_2026",
   "ingest_url": "http://localhost:8080/api/sync/ingest",
   "status_url": "http://localhost:8080/api/sync/status",
-  "workbook_path": "C:\\Users\\ashok\\OneDrive\\Desktop\\project\\thatwaffle\\sample_data\\Menu_Inventory.xlsx",
+  "workbook_path": "C:\\Users\\ashok\\OneDrive\\Desktop\\project\\thatwaffle\\sample_data\\Customers.xlsx",
   "debounce_seconds": 3.0,
   "file_stability_timeout_seconds": 5.0,
   "reconciliation_interval_seconds": 900,
@@ -141,34 +144,46 @@ Edit `sync_agent/config.json` to reflect your workbook path, sheet rules, and co
   "log_level": "INFO",
   "sheets": [
     {
-      "sheet_name": "Menu",
-      "primary_key": "Item Code",
+      "sheet_name": "Customers",
+      "primary_key": "Mobile Number",
       "header_row": 1,
       "data_start_row": 2,
       "columns": {
-        "Item Code": "item_code",
-        "Item Name": "name",
-        "Category": "category",
-        "Price": "price",
-        "Available": "is_available",
-        "Description": "description"
+        "Customer Name": "name",
+        "Name": "name",
+        "Mobile Number": "phone",
+        "Mobile": "phone",
+        "Phone": "phone",
+        "Phone Number": "phone",
+        "WhatsApp": "phone",
+        "Notes": "notes"
       }
     },
     {
-      "sheet_name": "Inventory",
-      "primary_key": "SKU",
+      "sheet_name": "Sheet1",
+      "primary_key": "Mobile Number",
       "header_row": 1,
       "data_start_row": 2,
       "columns": {
-        "SKU": "sku",
-        "Ingredient": "ingredient",
-        "Current Stock": "stock_qty",
-        "Unit": "unit",
-        "Min Level": "reorder_level"
+        "Customer Name": "name",
+        "Name": "name",
+        "Mobile Number": "phone",
+        "Mobile": "phone",
+        "Phone": "phone",
+        "Phone Number": "phone",
+        "WhatsApp": "phone",
+        "Notes": "notes"
       }
     }
   ]
 }
+```
+
+### Supported Customer Excel Headers:
+The normalizer automatically maps common column names:
+- **Name**: `Customer Name`, `Name`, `Full Name`
+- **Phone Number**: `Mobile Number`, `Mobile`, `Phone`, `Phone Number`, `WhatsApp`
+- Numbers are automatically cleaned and converted into standard Indian mobile format: `+91XXXXXXXXXX`.
 ```
 
 ### Configuration Options Reference:

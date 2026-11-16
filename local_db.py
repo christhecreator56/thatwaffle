@@ -7,6 +7,12 @@ import urllib.parse
 
 def _normalize_phone(raw):
     digits = re.sub(r'\D', '', str(raw or ''))
+    if digits.startswith('0091') and len(digits) == 14:
+        digits = digits[4:]
+    elif digits.startswith('91') and len(digits) == 12:
+        digits = digits[2:]
+    elif digits.startswith('0') and len(digits) == 11:
+        digits = digits[1:]
     if len(digits) == 10 and digits[0] in '6789':
         return '+91' + digits
     return ('+' + digits) if digits else ''
@@ -267,6 +273,52 @@ def handle_sync_ingest(device_id, sheet_name, sync_version, is_full_sync, record
                     r['synced_at'] = now_iso
                     r['sync_version'] = sync_version
                     deleted_count += 1
+
+    # When syncing Customers sheet, mirror directly into CRM customers table
+    if sheet_name.lower() in ('customers', 'customer', 'customer_list', 'clients'):
+        if 'customers' not in db:
+            db['customers'] = []
+
+        valid_excel_phones = set()
+        for item in records:
+            row_data = item.get('data') or {}
+            raw_phone = (
+                row_data.get('phone') or
+                row_data.get('mobile') or
+                row_data.get('mobile_number') or
+                row_data.get('contact') or
+                row_data.get('whatsapp') or
+                item.get('row_id')
+            )
+            phone = _normalize_phone(raw_phone)
+            if re.match(r'^\+91[6-9][0-9]{9}$', phone):
+                valid_excel_phones.add(phone)
+                name = str(row_data.get('name') or row_data.get('customer_name') or '').strip()
+                if not name or name.lower() == 'none':
+                    name = 'Customer'
+
+                existing_c = next((c for c in db['customers'] if _normalize_phone(c.get('phone')) == phone), None)
+                if existing_c:
+                    if name != 'Customer':
+                        existing_c['name'] = name
+                    existing_c['is_subscribed'] = True
+                    existing_c['unsubscribed_at'] = None
+                else:
+                    db['customers'].append({
+                        'id': str(uuid.uuid4()),
+                        'name': name,
+                        'phone': phone,
+                        'is_subscribed': True,
+                        'opted_in_at': now_iso,
+                        'source': 'import'
+                    })
+
+        # If full sync, reconcile customers previously imported via Excel that were removed
+        if is_full_sync and valid_excel_phones:
+            for c in db['customers']:
+                if c.get('source') == 'import' and _normalize_phone(c.get('phone')) not in valid_excel_phones:
+                    c['is_subscribed'] = False
+                    c['unsubscribed_at'] = now_iso
 
     # Log sync event
     db['sync_logs'].append({

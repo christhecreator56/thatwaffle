@@ -13,6 +13,24 @@ import openpyxl
 
 logger = logging.getLogger("sync_agent.excel_reader")
 
+def _normalize_phone_str(raw):
+    """
+    Normalizes mobile numbers into standard +91XXXXXXXXXX format.
+    """
+    if raw is None:
+        return None
+    import re
+    digits = re.sub(r'\D', '', str(raw or ''))
+    if digits.startswith('0091') and len(digits) == 14:
+        digits = digits[4:]
+    elif digits.startswith('91') and len(digits) == 12:
+        digits = digits[2:]
+    elif digits.startswith('0') and len(digits) == 11:
+        digits = digits[1:]
+    if len(digits) == 10 and digits[0] in '6789':
+        return '+91' + digits
+    return ('+' + digits) if digits else str(raw).strip()
+
 def _normalize_cell_value(val):
     """
     Safely converts openpyxl cell value to JSON-serializable Python type.
@@ -110,17 +128,19 @@ def read_sheet(workbook_path, sheet_config):
                     continue
 
                 norm_val = _normalize_cell_value(cell_val)
+                target_field = col_mapping.get(header_name)
+                is_phone_col = (target_field == 'phone') or ('phone' in header_name.lower()) or ('mobile' in header_name.lower())
+                if is_phone_col and norm_val is not None:
+                    norm_val = _normalize_phone_str(norm_val)
 
                 # Check if this column is the primary key
                 if primary_key_col and header_name.lower() == primary_key_col.lower():
                     raw_primary_val = norm_val
 
                 # Map column if specified in config, or use sanitized header name
-                target_field = col_mapping.get(header_name)
                 if target_field:
                     row_data[target_field] = norm_val
                 elif not col_mapping:
-                    # If no explicit mapping provided, sanitize header name
                     clean_field = header_name.lower().replace(' ', '_').replace('-', '_')
                     row_data[clean_field] = norm_val
 

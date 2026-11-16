@@ -3,7 +3,7 @@
   "device_key": "twp_sync_device_secret_key_2026",
   "ingest_url": "http://localhost:8080/api/sync/ingest",
   "status_url": "http://localhost:8080/api/sync/status",
-  "workbook_path": "../sample_data/Menu_Inventory.xlsx",
+  "workbook_path": "../sample_data/Customers.xlsx",
   "debounce_seconds": 3.0,
   "file_stability_timeout_seconds": 5.0,
   "reconciliation_interval_seconds": 900,
@@ -14,30 +14,35 @@
   "log_level": "INFO",
   "sheets": [
     {
-      "sheet_name": "Menu",
-      "primary_key": "Item Code",
+      "sheet_name": "Customers",
+      "primary_key": "Mobile Number",
       "header_row": 1,
       "data_start_row": 2,
       "columns": {
-        "Item Code": "item_code",
-        "Item Name": "name",
-        "Category": "category",
-        "Price": "price",
-        "Available": "is_available",
-        "Description": "description"
+        "Customer Name": "name",
+        "Name": "name",
+        "Mobile Number": "phone",
+        "Mobile": "phone",
+        "Phone": "phone",
+        "Phone Number": "phone",
+        "WhatsApp": "phone",
+        "Notes": "notes"
       }
     },
     {
-      "sheet_name": "Inventory",
-      "primary_key": "SKU",
+      "sheet_name": "Sheet1",
+      "primary_key": "Mobile Number",
       "header_row": 1,
       "data_start_row": 2,
       "columns": {
-        "SKU": "sku",
-        "Ingredient": "ingredient",
-        "Current Stock": "stock_qty",
-        "Unit": "unit",
-        "Min Level": "reorder_level"
+        "Customer Name": "name",
+        "Name": "name",
+        "Mobile Number": "phone",
+        "Mobile": "phone",
+        "Phone": "phone",
+        "Phone Number": "phone",
+        "WhatsApp": "phone",
+        "Notes": "notes"
       }
     }
   ]

@@ -922,6 +922,45 @@ class WaffleRequestHandler(http.server.SimpleHTTPRequestHandler):
                             method="POST"
                         )
                         urllib.request.urlopen(sb_req, timeout=5)
+
+                    # Also mirror directly to Supabase customers table if sheet is Customers
+                    if sheet_name.lower() in ('customers', 'customer', 'customer_list', 'clients'):
+                        cust_url = f"{SUPABASE_URL}/rest/v1/customers"
+                        sb_cust = []
+                        for r in records:
+                            r_data = r.get('data') or {}
+                            raw_p = (
+                                r_data.get('phone') or
+                                r_data.get('mobile') or
+                                r_data.get('mobile_number') or
+                                r_data.get('contact') or
+                                r_data.get('whatsapp') or
+                                r.get('row_id')
+                            )
+                            p = local_db._normalize_phone(raw_p)
+                            if re.match(r'^\+91[6-9][0-9]{9}$', p):
+                                nm = str(r_data.get('name') or r_data.get('customer_name') or '').strip()
+                                if not nm or nm.lower() == 'none':
+                                    nm = 'Customer'
+                                sb_cust.append({
+                                    "name": nm,
+                                    "phone": p,
+                                    "is_subscribed": True,
+                                    "source": "import"
+                                })
+                        if sb_cust:
+                            cust_req = urllib.request.Request(
+                                cust_url,
+                                data=json.dumps(sb_cust).encode('utf-8'),
+                                headers={
+                                    "apikey": service_role_key,
+                                    "Authorization": f"Bearer {service_role_key}",
+                                    "Content-Type": "application/json",
+                                    "Prefer": "resolution=merge-duplicates"
+                                },
+                                method="POST"
+                            )
+                            urllib.request.urlopen(cust_req, timeout=5)
                 except Exception as ex:
                     print(f"[SYNC UPSTREAM NOTICE] Upstream Supabase mirror skipped ({ex}); local persistence safe.", flush=True)
 

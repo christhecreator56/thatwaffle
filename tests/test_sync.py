@@ -309,5 +309,18 @@ class TestBackendIngestAndLocalDb(unittest.TestCase):
         self.assertEqual(status["sheets"]["Menu"]["active_records"], 2)
         self.assertEqual(status["sheets"]["Menu"]["deleted_records"], 1)
 
+    def test_customers_sheet_sync(self):
+        records = [
+            {"row_id": "+919876543210", "data": {"name": "Priya Sharma", "phone": "+919876543210"}},
+            {"row_id": "9840123456", "data": {"name": "Karthik R", "phone": "9840123456"}}
+        ]
+        upserted, deleted = local_db.handle_sync_ingest("dev-1", "Customers", 2001, True, records)
+        self.assertEqual(upserted, 2)
+
+        db = local_db.load_db()
+        cust_phones = [c["phone"] for c in db.get("customers", [])]
+        self.assertIn("+919876543210", cust_phones)
+        self.assertIn("+919840123456", cust_phones)
+
 if __name__ == "__main__":
     unittest.main()
