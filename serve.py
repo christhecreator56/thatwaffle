@@ -1320,6 +1320,8 @@ class WaffleRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Content-Length', str(len(resp_data)))
                 self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+                self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization, apikey, Prefer, x-upsert, cache-control, X-Device-Key, X-Device-Id')
                 self.end_headers()
                 self.wfile.write(resp_data)
                 return
@@ -1333,6 +1335,8 @@ class WaffleRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Content-Length', str(len(resp_data)))
                 self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+                self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization, apikey, Prefer, x-upsert, cache-control, X-Device-Key, X-Device-Id')
                 self.end_headers()
                 self.wfile.write(resp_data)
                 return
@@ -1413,6 +1417,13 @@ class WaffleRequestHandler(http.server.SimpleHTTPRequestHandler):
     def proxy_to_supabase(self):
         parsed = urllib.parse.urlparse(self.path)
         path = parsed.path
+        if path.startswith('/sb/realtime'):
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(b'{"status":"ok"}')
+            return
         upstream_url = f"{SUPABASE_URL}/" + path[4:]
         if parsed.query:
             upstream_url += '?' + parsed.query
@@ -1441,7 +1452,7 @@ class WaffleRequestHandler(http.server.SimpleHTTPRequestHandler):
                         pass
 
             req = urllib.request.Request(upstream_url, data=body_bytes, headers=headers, method=self.command)
-            with urllib.request.urlopen(req) as resp:
+            with urllib.request.urlopen(req, timeout=10) as resp:
                 data = resp.read()
                 self.send_response(resp.status)
                 for k, v in resp.getheaders():
@@ -2427,6 +2438,8 @@ class WaffleRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_header('Content-Type', 'application/json')
                 self.send_header('Content-Length', str(len(resp_data)))
                 self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS')
+                self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization, apikey, Prefer, x-upsert, cache-control, X-Device-Key, X-Device-Id')
                 self.end_headers()
                 self.wfile.write(resp_data)
                 return

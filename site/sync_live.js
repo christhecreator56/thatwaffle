@@ -109,6 +109,19 @@
 
   function initRealtime() {
     var c = window.TWP_SUPABASE || {};
+
+    // Bulletproof periodic heartbeat polling (every 10s on local, 15s on prod)
+    if (!pollTimer) {
+      pollTimer = setInterval(function () {
+        fetchStatus();
+      }, 10000);
+    }
+
+    // On localhost, skip Supabase realtime websockets to avoid looping reconnections
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1' || (c.url && (c.url.indexOf('localhost') !== -1 || c.url.indexOf('127.0.0.1') !== -1))) {
+      return;
+    }
+
     if (global.supabase && typeof global.supabase.createClient === 'function' && c.url && c.anonKey) {
       try {
         var client = global.supabase.createClient(c.url, c.anonKey);
@@ -134,13 +147,6 @@
       } catch (e) {
         console.warn('Realtime subscription skipped, using background polling:', e);
       }
-    }
-
-    // Bulletproof periodic heartbeat polling (every 15s)
-    if (!pollTimer) {
-      pollTimer = setInterval(function () {
-        fetchStatus();
-      }, 15000);
     }
   }
 

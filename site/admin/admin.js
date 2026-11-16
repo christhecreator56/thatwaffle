@@ -24,7 +24,8 @@
     toastTimer = setTimeout(function () { t.hidden = true; }, 2800);
   }
   function say(err) {
-    var m = (err && err.message) || '';
+    var m = (err && (err.message || err.error_description || (typeof err === 'string' ? err : ''))) || '';
+    if (/already exists/i.test(m)) return m;
     if (/row-level security|permission denied/i.test(m)) return 'This account is not allowed to make changes.';
     if (/Invalid login/i.test(m)) return 'That email or password is wrong.';
     if (/duplicate key|unique constraint/i.test(m)) return 'This phone number is already registered.';
