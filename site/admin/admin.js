@@ -588,6 +588,56 @@
         extraBtns.push(quickB);
       }
 
+      // Direct WhatsApp broadcast to all Excel customers
+      var broadcastBtn = el('button', 'acts__primary', 'WhatsApp to Customers');
+      broadcastBtn.type = 'button';
+      broadcastBtn.title = 'Send this offer via WhatsApp to all customers synced from Excel';
+      broadcastBtn.addEventListener('click', function () {
+        var subList = customers.filter(function (c) { return c.is_subscribed; });
+        var subCount = subList.length;
+        if (subCount === 0) {
+          toast('No subscribed customers found in CRM. Sync your Excel file or add customers first.');
+          return;
+        }
+        askConfirm({
+          title: 'Broadcast Offer to Excel Customers?',
+          message: 'Send "' + o.name + '" (' + o.discount + ') via WhatsApp to ' + subCount + ' customers synced from Excel right now?',
+          confirmText: 'Send to ' + subCount + ' Customers',
+          tone: 'wa'
+        }).then(function (ok) {
+          if (!ok) return;
+          showActionLoader('Broadcasting WhatsApp Offer...', 'Delivering "' + o.name + '" to your ' + subCount + ' customer subscribers...');
+          var b = getOfferBroadcast(o.id);
+          var bId = b ? b.id : null;
+          var p = bId 
+            ? Promise.resolve({ id: bId })
+            : db.from('broadcasts').insert({
+                offer_id: o.id,
+                offer_name: o.name,
+                discount: o.discount,
+                status: 'scheduled',
+                scheduled_at: new Date().toISOString()
+              }).select('id').then(function (res) { return (must(res) || [{}])[0]; });
+
+          p.then(function (createdB) {
+            return fetch('/api/dispatch-broadcast', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ broadcast_id: createdB.id || bId })
+            });
+          }).then(function (r) { return r.json(); }).then(function (res) {
+            if (res.error) throw new Error(res.error);
+            toast('Offer sent to ' + (res.sent || subCount) + ' Excel customers successfully!');
+            loadOffers();
+          }).catch(function (e) {
+            toast('Broadcast error: ' + e.message);
+          }).finally(function () {
+            hideActionLoader();
+          });
+        });
+      });
+      extraBtns.unshift(broadcastBtn);
+
       var sub = o.discount + ' · ' + day(o.starts_on) + ' to ' + day(o.ends_on);
       list.appendChild(row(o.poster_url, o.name, pills, sub,
         function () { openOffer(o); },
@@ -701,8 +751,10 @@
 
     var bubble = $('waBubbleContent');
     if (bubble) {
+      var sampleCust = customers.find(function (c) { return c.is_subscribed; });
+      var previewCustName = sampleCust ? (sampleCust.name || 'Aravindan') : 'Aravindan';
       bubble.innerHTML = formatWhatsAppPreview(rawCustom, {
-        name: 'Aravindan',
+        name: previewCustName,
         offer: name,
         discount: disc,
         validity: validityStr,
@@ -1785,6 +1837,54 @@
   }
 
   /* CUSTOMERS SECTION */
+  function sendOfferToCustomer(c) {
+    var activeOffer = offers.find(function (o) { return o.is_visible; }) || offers[0];
+    if (!activeOffer) {
+      toast('No active offers found. Please add an offer in the Offers tab first.');
+      return;
+    }
+    var cleanPhone = (c.phone || '').replace(/\D/g, '');
+    var offerText = '*That Waffle Place*\n\nHey ' + (c.name || 'Valued Customer') + '! 🧇 Here is a fresh offer for you:\n\n🔥 *' + activeOffer.name + '*\n🏷️ *Offer:* *' + activeOffer.discount + '* on your order!\n📅 *Valid:* ' + day(activeOffer.starts_on) + ' to ' + day(activeOffer.ends_on) + '\n\nShow this message at the counter to claim! 🧇✨\n_Reply STOP to unsubscribe_';
+
+    askConfirm({
+      title: 'Send Offer to ' + (c.name || 'Customer') + '?',
+      message: 'Send WhatsApp offer "' + activeOffer.name + '" (' + activeOffer.discount + ') to ' + c.phone + '?',
+      confirmText: 'Send via WhatsApp',
+      tone: 'wa'
+    }).then(function (ok) {
+      if (!ok) return;
+      showActionLoader('Sending offer...', 'Delivering offer to ' + c.name + ' (' + c.phone + ')...');
+      fetch('/api/send-whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: cleanPhone,
+          customer_name: c.name,
+          offer_name: activeOffer.name,
+          discount: activeOffer.discount,
+          validity: day(activeOffer.starts_on) + ' to ' + day(activeOffer.ends_on),
+          terms: activeOffer.terms || 'Terms apply.',
+          poster_url: activeOffer.poster_url || '',
+          custom_message: offerText
+        })
+      }).then(function (r) { return r.json(); }).then(function (res) {
+        if (res.success) {
+          toast('Offer sent to ' + c.name + '! (' + res.mode + ')');
+        } else {
+          var waUrl = 'https://wa.me/' + cleanPhone + '?text=' + encodeURIComponent(offerText);
+          window.open(waUrl, '_blank');
+          toast('Opened WhatsApp for ' + c.name);
+        }
+      }).catch(function () {
+        var waUrl = 'https://wa.me/' + cleanPhone + '?text=' + encodeURIComponent(offerText);
+        window.open(waUrl, '_blank');
+        toast('Opened WhatsApp for ' + c.name);
+      }).finally(function () {
+        hideActionLoader();
+      });
+    });
+  }
+
   function drawCustomers(itemsToDraw) {
     var list = $('customerList');
     list.textContent = '';
@@ -1792,19 +1892,42 @@
     if (!set.length) list.appendChild(el('li', 'empty', 'No customers found.'));
 
     set.forEach(function (c) {
+      var sourceLbl = (c.source === 'import' ? 'Excel Synced' : (c.source || 'website'));
       var pills = [
         { text: c.is_subscribed ? 'Active' : 'Unsubscribed', on: c.is_subscribed },
-        { text: c.source || 'website', cls: 'pill' }
+        { text: sourceLbl, cls: 'pill' }
       ];
+
+      if (c.notes) {
+        pills.push({ text: 'Note: ' + c.notes, cls: 'pill' });
+      }
+
+      if (c.custom_fields && typeof c.custom_fields === 'object') {
+        Object.keys(c.custom_fields).forEach(function (k) {
+          var val = c.custom_fields[k];
+          if (val !== null && val !== undefined && String(val).trim() !== '') {
+            pills.push({ text: k + ': ' + val, cls: 'pill' });
+          }
+        });
+      }
+
       var sub = c.phone + ' · Joined ' + day(c.opted_in_at ? c.opted_in_at.split('T')[0] : '');
 
       var toggleBtn = el('button', '', c.is_subscribed ? 'Unsubscribe' : 'Resubscribe');
       toggleBtn.type = 'button';
       toggleBtn.addEventListener('click', function () { toggleCustomerSubscription(c, toggleBtn); });
 
+      var acts = [toggleBtn];
+
+      var sendOfferBtn = el('button', 'acts__primary', 'Send Offer');
+      sendOfferBtn.type = 'button';
+      sendOfferBtn.title = 'Send current active offer to ' + (c.name || 'this customer') + ' via WhatsApp';
+      sendOfferBtn.addEventListener('click', function () { sendOfferToCustomer(c); });
+      acts.unshift(sendOfferBtn);
+
       list.appendChild(row(null, c.name, pills, sub, null, function () {
         remove('customers', c.id, c.name, loadCustomers);
-      }, [toggleBtn]));
+      }, acts));
     });
 
     var subCount = customers.filter(function (c) { return c.is_subscribed; }).length;
@@ -1813,6 +1936,18 @@
     $('countUnsubscribed').textContent = unsubCount;
     var waAud = $('waAudienceVal');
     if (waAud) waAud.textContent = subCount + ' subscribed member' + (subCount === 1 ? '' : 's');
+
+    var waRecips = $('waRecipientsPreview');
+    if (waRecips) {
+      var subList = customers.filter(function (c) { return c.is_subscribed; });
+      if (!subList.length) {
+        waRecips.innerHTML = '<em>No active customers in CRM yet. Add rows in your Excel file to sync!</em>';
+      } else {
+        var names = subList.slice(0, 4).map(function (c) { return (c.name || 'Customer') + ' (' + c.phone + ')'; }).join(', ');
+        if (subList.length > 4) names += ', +' + (subList.length - 4) + ' more';
+        waRecips.innerHTML = '<b>' + subList.length + ' Excel recipients ready:</b> ' + names;
+      }
+    }
   }
 
   function loadCustomers() {

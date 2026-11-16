@@ -13,6 +13,14 @@ import openpyxl
 
 logger = logging.getLogger("sync_agent.excel_reader")
 
+def _is_phone_header(header_name):
+    h = str(header_name or '').lower().replace(' ', '').replace('_', '').replace('-', '')
+    return any(k in h for k in ('phone', 'mobile', 'whatsapp', 'contact', 'cell', 'tel', 'phno', 'mobno', 'phonenumber', 'mobilenumber'))
+
+def _is_name_header(header_name):
+    h = str(header_name or '').lower().replace(' ', '').replace('_', '').replace('-', '')
+    return any(k in h for k in ('name', 'customer', 'client', 'fullname', 'person', 'customername', 'clientname'))
+
 def _normalize_phone_str(raw):
     """
     Normalizes mobile numbers into standard +91XXXXXXXXXX format.
@@ -83,17 +91,22 @@ def read_sheet(workbook_path, sheet_config):
     # Strict read-only and data-only to ensure zero writes and formula evaluation
     wb = openpyxl.load_workbook(workbook_path, read_only=True, data_only=True)
     try:
+        # Auto-resolve sheet if not found directly (case-insensitive)
         if sheet_name not in wb.sheetnames:
-            msg = f"Sheet '{sheet_name}' not found in workbook. Available sheets: {wb.sheetnames}"
-            logger.warning(msg)
-            warnings.append(msg)
-            return {
-                "sheet_name": sheet_name,
-                "records": [],
-                "content_hash": "",
-                "total_rows_read": 0,
-                "warnings": warnings
-            }
+            matched = next((s for s in wb.sheetnames if s.lower() == (sheet_name or '').lower()), None)
+            if matched:
+                sheet_name = matched
+            else:
+                msg = f"Sheet '{sheet_name}' not found in workbook. Available sheets: {wb.sheetnames}"
+                logger.warning(msg)
+                warnings.append(msg)
+                return {
+                    "sheet_name": sheet_name,
+                    "records": [],
+                    "content_hash": "",
+                    "total_rows_read": 0,
+                    "warnings": warnings
+                }
 
         ws = wb[sheet_name]
 
@@ -102,6 +115,8 @@ def read_sheet(workbook_path, sheet_config):
         current_row_idx = 0
         records = []
         seen_row_ids = {} # row_id -> count
+        phone_col_idx = None
+        name_col_idx = None
 
         for row in ws.iter_rows(values_only=True):
             current_row_idx += 1
@@ -109,7 +124,12 @@ def read_sheet(workbook_path, sheet_config):
             if current_row_idx == header_row_num:
                 for idx, cell_val in enumerate(row):
                     if cell_val is not None and str(cell_val).strip():
-                        headers[idx] = str(cell_val).strip()
+                        h_clean = str(cell_val).strip()
+                        headers[idx] = h_clean
+                        if phone_col_idx is None and _is_phone_header(h_clean):
+                            phone_col_idx = idx
+                        elif name_col_idx is None and _is_name_header(h_clean):
+                            name_col_idx = idx
                 continue
 
             if current_row_idx < data_start_row_num:
@@ -121,6 +141,8 @@ def read_sheet(workbook_path, sheet_config):
 
             row_data = {}
             raw_primary_val = None
+            detected_phone = None
+            detected_name = None
 
             for col_idx, cell_val in enumerate(row):
                 header_name = headers.get(col_idx)
@@ -129,26 +151,35 @@ def read_sheet(workbook_path, sheet_config):
 
                 norm_val = _normalize_cell_value(cell_val)
                 target_field = col_mapping.get(header_name)
-                is_phone_col = (target_field == 'phone') or ('phone' in header_name.lower()) or ('mobile' in header_name.lower())
+                clean_field = header_name.lower().replace(' ', '_').replace('-', '_')
+
+                is_phone_col = (col_idx == phone_col_idx) or (target_field == 'phone') or _is_phone_header(header_name)
+                is_name_col = (col_idx == name_col_idx) or (target_field == 'name') or _is_name_header(header_name)
+
                 if is_phone_col and norm_val is not None:
                     norm_val = _normalize_phone_str(norm_val)
+                    detected_phone = norm_val
+                    row_data['phone'] = norm_val
+                    row_data[clean_field] = norm_val
+                elif is_name_col and norm_val is not None:
+                    detected_name = str(norm_val).strip()
+                    row_data['name'] = detected_name
+                    row_data[clean_field] = detected_name
+                else:
+                    # Capture ANY and ALL custom columns dynamically
+                    field_key = target_field if target_field else clean_field
+                    row_data[field_key] = norm_val
 
-                # Check if this column is the primary key
-                if primary_key_col and header_name.lower() == primary_key_col.lower():
+                # Check if this column is the explicitly requested primary key
+                if primary_key_col and header_name.lower() == str(primary_key_col).lower():
                     raw_primary_val = norm_val
 
-                # Map column if specified in config, or use sanitized header name
-                if target_field:
-                    row_data[target_field] = norm_val
-                elif not col_mapping:
-                    clean_field = header_name.lower().replace(' ', '_').replace('-', '_')
-                    row_data[clean_field] = norm_val
-
-            # Determine permanent row ID
-            if raw_primary_val is not None:
+            # Determine permanent row ID: prioritize phone number, then explicit primary key, then fallback
+            if detected_phone:
+                row_id = str(detected_phone).strip()
+            elif raw_primary_val is not None:
                 row_id = str(raw_primary_val).strip()
             else:
-                # Fallback to deterministic hash or row index if primary key is empty
                 row_id = f"row_{current_row_idx}"
                 warnings.append(f"Row {current_row_idx} in sheet '{sheet_name}' has missing primary key '{primary_key_col}'; generated fallback ID '{row_id}'.")
 

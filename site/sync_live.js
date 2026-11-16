@@ -120,10 +120,12 @@
           .subscribe(function (status) {
             if (status === 'SUBSCRIBED') {
               state.connected = true;
+              state.realtimeActive = true;
               emit();
               renderBadge();
             } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-              state.connected = false;
+              state.realtimeActive = false;
+              // Maintain connection if REST API is healthy
               emit();
               renderBadge();
             }
@@ -149,6 +151,10 @@
     }
   }
 
+  function esc(s) {
+    return (s || '').toString().replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
   function renderBadge() {
     var badge = document.getElementById('twpSyncBadge');
     if (!badge) {
@@ -167,9 +173,10 @@
     }
     if (!badge) return;
 
-    var dotCls = state.connected ? 'dot--live' : (state.connecting ? 'dot--reconnecting' : 'dot--offline');
-    var statusText = state.connected 
-      ? 'Live Sync: ' + state.totalRecords + ' items (' + formatTime(state.lastSync) + ')' 
+    var isLive = state.connected || (state.totalRecords > 0 && !state.lastError);
+    var dotCls = isLive ? 'dot--live' : (state.connecting ? 'dot--reconnecting' : 'dot--offline');
+    var statusText = isLive 
+      ? 'Live Sync: ' + state.totalRecords + ' Customers (' + formatTime(state.lastSync) + ')' 
       : (state.connecting ? 'Reconnecting...' : 'Sync Offline (' + (state.lastError || 'offline') + ')');
 
     badge.innerHTML = 
@@ -196,62 +203,73 @@
       return r.sheet_name === state.activeSheetFilter;
     });
 
+    var isLive = state.connected || (state.totalRecords > 0 && !state.lastError);
+
     var cardsHtml = 
       '<div class="twp-sync-dashboard-grid">' +
         '<div class="twp-sync-stat-card">' +
           '<span class="twp-label">Connection Status</span>' +
-          '<h3>' + (state.connected ? '🟢 Connected (Realtime)' : '🔴 Offline / Reconnecting') + '</h3>' +
+          '<h3><span class="twp-sync-dot ' + (isLive ? 'dot--live' : 'dot--offline') + '" style="margin-right:6px;"></span> ' + (isLive ? 'Connected (Live)' : 'Offline / Reconnecting') + '</h3>' +
           '<p class="twp-note">Automatic polling &amp; change listeners active</p>' +
         '</div>' +
         '<div class="twp-sync-stat-card">' +
-          '<span class="twp-label">Active Records</span>' +
-          '<h3>' + state.totalRecords + ' Rows</h3>' +
-          '<p class="twp-note">' + sheetsList.length + ' synchronized Excel sheets</p>' +
+          '<span class="twp-label">Customer Records</span>' +
+          '<h3>' + state.totalRecords + ' Customers</h3>' +
+          '<p class="twp-note">Source of truth: Windows .xlsx workbook</p>' +
         '</div>' +
         '<div class="twp-sync-stat-card">' +
           '<span class="twp-label">Last Ingested</span>' +
           '<h3>' + formatTime(state.lastSync) + '</h3>' +
-          '<p class="twp-note">Source of truth: Windows .xlsx workbook</p>' +
+          '<p class="twp-note">Dynamic columns synced into CRM &amp; Offers</p>' +
         '</div>' +
       '</div>';
 
     var filterOptions = '<option value="all">All Synchronized Sheets (' + state.records.length + ')</option>';
     sheetsList.forEach(function (s) {
       var cnt = state.sheets[s].active_records || 0;
-      filterOptions += '<option value="' + s + '" ' + (state.activeSheetFilter === s ? 'selected' : '') + '>' + s + ' (' + cnt + ' active)</option>';
+      filterOptions += '<option value="' + esc(s) + '" ' + (state.activeSheetFilter === s ? 'selected' : '') + '>' + esc(s) + ' (' + cnt + ' active)</option>';
     });
 
     var filterHtml = 
       '<div class="twp-sync-bar">' +
         '<div class="twp-sync-filter">' +
-          '<label for="syncSheetFilter" class="twp-label">Filter Sheet:</label>' +
+          '<label for="syncSheetFilter" class="twp-label" style="margin:0;font-size:12px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;">Filter Sheet:</label>' +
           '<select id="syncSheetFilter" class="twp-select">' + filterOptions + '</select>' +
         '</div>' +
-        '<button type="button" class="twp-btn twp-btn--ghost" id="refreshSyncBtn">↻ Refresh Sync Data</button>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">' +
+          '<button type="button" class="twp-btn twp-btn--ghost" id="refreshSyncBtn">↻ Refresh Data</button>' +
+          '<button type="button" class="twp-btn twp-btn--ghost" id="resetFreshBtn" style="color:#b91c1c;border-color:#fca5a5;" title="Clear stale records and re-sync freshly from Excel">🗑️ Clear &amp; Start Fresh</button>' +
+        '</div>' +
       '</div>';
 
     var rowsHtml = '';
     if (filteredRecords.length === 0) {
-      rowsHtml = '<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--ink-soft);">No records found. Run the sync agent or edit your Excel workbook to populate live rows.</td></tr>';
+      rowsHtml = '<tr><td colspan="6" style="text-align:center;padding:36px;color:var(--ink-soft);font-family:var(--font-sans);font-size:14px;">No customer records yet. Add rows in your Excel file or click <b>↻ Refresh Data</b>.</td></tr>';
     } else {
       filteredRecords.forEach(function (r) {
         var statusBadge = r.is_deleted 
           ? '<span class="twp-chip twp-chip--del">Archived</span>' 
           : '<span class="twp-chip twp-chip--ok">Active</span>';
         
-        var dataPreview = JSON.stringify(r.data || {})
-          .replace(/"/g, '')
-          .replace(/[{}]/g, '')
-          .replace(/,/g, ' · ');
+        var attrChips = '';
+        if (r.data && typeof r.data === 'object') {
+          Object.keys(r.data).forEach(function (k) {
+            var val = r.data[k];
+            if (val !== null && val !== undefined && String(val).trim() !== '') {
+              attrChips += '<span class="twp-record-attr-chip"><b>' + esc(k) + ':</b> ' + esc(String(val)) + '</span> ';
+            }
+          });
+        }
+        if (!attrChips) attrChips = '<span style="color:var(--ink-soft);">-</span>';
 
         rowsHtml += 
           '<tr>' +
-            '<td><b>' + (r.sheet_name || '') + '</b></td>' +
-            '<td><code>' + (r.row_id || '') + '</code></td>' +
+            '<td><b style="color:var(--umber);">' + esc(r.sheet_name || '') + '</b></td>' +
+            '<td><code style="background:#f3ecda;padding:2px 6px;border-radius:4px;color:var(--dune);font-weight:600;">' + esc(r.row_id || '') + '</code></td>' +
             '<td>' + (r.row_number != null ? '#' + r.row_number : '-') + '</td>' +
-            '<td><span class="twp-record-preview">' + dataPreview + '</span></td>' +
+            '<td><div class="twp-record-attr-list">' + attrChips + '</div></td>' +
             '<td>' + statusBadge + '</td>' +
-            '<td><small>' + formatTime(r.synced_at) + '</small></td>' +
+            '<td><small style="color:var(--ink-soft);font-weight:600;">' + formatTime(r.synced_at) + '</small></td>' +
           '</tr>';
       });
     }
@@ -262,9 +280,9 @@
           '<thead>' +
             '<tr>' +
               '<th>Sheet</th>' +
-              '<th>Row ID</th>' +
+              '<th>Customer ID / Phone</th>' +
               '<th>Excel Row</th>' +
-              '<th>Ingested Attributes</th>' +
+              '<th>Ingested Attributes (Dynamic Columns)</th>' +
               '<th>Status</th>' +
               '<th>Synced At</th>' +
             '</tr>' +
@@ -276,8 +294,8 @@
     section.innerHTML = 
       '<div class="head">' +
         '<div>' +
-          '<h1>Excel Live Sync</h1>' +
-          '<p style="margin:4px 0 0;font-size:14px;color:var(--ink-soft);">One-way durable sync from Windows PC Excel workbook into Supabase.</p>' +
+          '<h1>customer excel live sync</h1>' +
+          '<p style="margin:4px 0 0;font-size:14.5px;font-family:var(--font-sans);color:var(--ink-soft);">One-way live synchronization from your Windows Excel workbook directly into Customer CRM and WhatsApp Broadcasts.</p>' +
         '</div>' +
       '</div>' +
       cardsHtml +
@@ -300,6 +318,31 @@
         Promise.all([fetchStatus(), fetchRecords()]).then(function () {
           renderSyncTab();
         });
+      });
+    }
+
+    var resetBtn = document.getElementById('resetFreshBtn');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', function () {
+        if (!confirm('Clear old synchronized test sheets and records to start fresh? Your current CRM counter opt-ins will remain safe.')) return;
+        resetBtn.disabled = true;
+        resetBtn.textContent = 'Resetting...';
+        fetch('/api/sync/reset', { method: 'POST' })
+          .then(function (r) { return r.json(); })
+          .then(function () {
+            return Promise.all([fetchStatus(), fetchRecords()]);
+          })
+          .then(function () {
+            renderSyncTab();
+            alert('Synced records cleared fresh! Now add or save rows in your Excel file to sync cleanly.');
+          })
+          .catch(function (e) {
+            alert('Reset error: ' + e.message);
+          })
+          .finally(function () {
+            resetBtn.disabled = false;
+            resetBtn.textContent = '🗑️ Clear & Start Fresh';
+          });
       });
     }
   }

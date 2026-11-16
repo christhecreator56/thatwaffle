@@ -15,33 +15,20 @@
   "sheets": [
     {
       "sheet_name": "Customers",
-      "primary_key": "Mobile Number",
+      "primary_key": "auto",
       "header_row": 1,
       "data_start_row": 2,
       "columns": {
         "Customer Name": "name",
         "Name": "name",
+        "Full Name": "name",
+        "Client": "name",
         "Mobile Number": "phone",
         "Mobile": "phone",
         "Phone": "phone",
         "Phone Number": "phone",
         "WhatsApp": "phone",
-        "Notes": "notes"
-      }
-    },
-    {
-      "sheet_name": "Sheet1",
-      "primary_key": "Mobile Number",
-      "header_row": 1,
-      "data_start_row": 2,
-      "columns": {
-        "Customer Name": "name",
-        "Name": "name",
-        "Mobile Number": "phone",
-        "Mobile": "phone",
-        "Phone": "phone",
-        "Phone Number": "phone",
-        "WhatsApp": "phone",
+        "Contact": "phone",
         "Notes": "notes"
       }
     }

@@ -274,8 +274,9 @@ def handle_sync_ingest(device_id, sheet_name, sync_version, is_full_sync, record
                     r['sync_version'] = sync_version
                     deleted_count += 1
 
-    # When syncing Customers sheet, mirror directly into CRM customers table
-    if sheet_name.lower() in ('customers', 'customer', 'customer_list', 'clients'):
+    # When syncing Customers sheet (or any sheet since workbook is used only for customers)
+    is_customer_sheet = sheet_name.lower() in ('customers', 'customer', 'customer_list', 'clients', 'sheet1', 'sheet_1') or True
+    if is_customer_sheet:
         if 'customers' not in db:
             db['customers'] = []
 
@@ -297,17 +298,29 @@ def handle_sync_ingest(device_id, sheet_name, sync_version, is_full_sync, record
                 if not name or name.lower() == 'none':
                     name = 'Customer'
 
+                custom_fields = {
+                    k: v for k, v in row_data.items()
+                    if k not in ('phone', 'mobile', 'mobile_number', 'contact', 'whatsapp', 'name', 'customer_name', 'notes') and v is not None and str(v).strip() != ''
+                }
+
                 existing_c = next((c for c in db['customers'] if _normalize_phone(c.get('phone')) == phone), None)
                 if existing_c:
                     if name != 'Customer':
                         existing_c['name'] = name
                     existing_c['is_subscribed'] = True
                     existing_c['unsubscribed_at'] = None
+                    existing_c['source'] = 'import'
+                    if row_data.get('notes'):
+                        existing_c['notes'] = row_data.get('notes')
+                    existing_c['custom_fields'] = custom_fields
+                    existing_c['updated_at'] = now_iso
                 else:
                     db['customers'].append({
                         'id': str(uuid.uuid4()),
                         'name': name,
                         'phone': phone,
+                        'notes': row_data.get('notes') or '',
+                        'custom_fields': custom_fields,
                         'is_subscribed': True,
                         'opted_in_at': now_iso,
                         'source': 'import'
@@ -380,4 +393,20 @@ def get_sync_status():
         'devices': devices,
         'last_sync': last_log
     }
+
+def reset_sync_data(keep_counter_customers=True):
+    """
+    Clears all synced records and sync logs to allow connecting Excel live fresh.
+    """
+    db = load_db()
+    db['synced_records'] = []
+    db['sync_logs'] = []
+    if not keep_counter_customers:
+        db['customers'] = []
+    else:
+        # Keep non-imported customers (counter opt-ins)
+        db['customers'] = [c for c in db.get('customers', []) if c.get('source') != 'import']
+    save_db(db)
+    return {"success": True, "message": "Synced records and logs have been reset fresh."}
+
 

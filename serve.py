@@ -983,6 +983,17 @@ class WaffleRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(resp_data)
             return
 
+        if path == '/api/sync/reset':
+            res = local_db.reset_sync_data()
+            resp_data = json.dumps(res).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(resp_data)))
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(resp_data)
+            return
+
         # Intercept Supabase local tables
         if path.startswith('/sb/rest/v1/'):
             subpath = path[12:]
@@ -2006,6 +2017,17 @@ class WaffleRequestHandler(http.server.SimpleHTTPRequestHandler):
         if path == '/api/sync/status':
             status_obj = local_db.get_sync_status()
             resp_data = json.dumps(status_obj, indent=2).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(resp_data)))
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(resp_data)
+            return
+
+        if path == '/api/sync/reset':
+            res = local_db.reset_sync_data()
+            resp_data = json.dumps(res, indent=2).encode('utf-8')
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.send_header('Content-Length', str(len(resp_data)))

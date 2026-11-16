@@ -1449,8 +1449,8 @@ input[type=file]{font:inherit;font-size:15px;max-width:100%}
 /* Customers Stats Cards */
 .stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-3)}
 .stat-card{background:var(--kinari);border:2px solid var(--dune);border-radius:var(--radius-md);padding:var(--space-3);box-shadow:var(--sticker-sm);display:flex;flex-direction:column;gap:4px}
-.stat-card__val{font-family:var(--font-poster);font-size:36px;line-height:1;color:var(--umber)}
-.stat-card__lbl{font-size:13px;color:var(--ink-soft);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.stat-card__val{font-family:var(--font-sans);font-weight:800;font-size:34px;letter-spacing:-0.02em;line-height:1;color:var(--umber)}
+.stat-card__lbl{font-family:var(--font-sans);font-size:12px;color:var(--ink-soft);font-weight:800;text-transform:uppercase;letter-spacing:.06em}
 
 /* Custom Enhanced Brand Dropdowns */
 .twp-dropdown {
@@ -2310,10 +2310,10 @@ label#importCsvBtn {
   border: 1.5px solid var(--dune);
   padding: 6px 14px;
   border-radius: var(--radius-pill);
-  font-family: inherit;
+  font-family: var(--font-sans);
   font-size: 13px;
   font-weight: 700;
-  color: var(--ink);
+  color: var(--dune);
   cursor: pointer;
   box-shadow: 0 2px 0 var(--dune);
   transition: all 0.15s ease;
@@ -2365,14 +2365,41 @@ label#importCsvBtn {
   background: var(--surface);
   border: 2px solid var(--dune);
   border-radius: var(--radius-lg);
-  padding: 18px 20px;
+  padding: 20px 22px;
   box-shadow: 0 4px 0 var(--dune);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.twp-sync-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 0 var(--dune);
+}
+.twp-sync-stat-card .twp-label {
+  display: block;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #766355;
+  margin-bottom: 6px;
 }
 .twp-sync-stat-card h3 {
-  margin: 6px 0 4px;
-  font-family: var(--font-display);
-  font-size: 24px;
-  color: var(--umber);
+  margin: 0 0 6px;
+  font-family: var(--font-sans);
+  font-size: 25px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  color: var(--dune);
+  display: flex;
+  align-items: center;
+}
+.twp-sync-stat-card .twp-note {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.4;
+  color: #6d5b4f;
 }
 .twp-sync-bar {
   display: flex;
@@ -2381,10 +2408,11 @@ label#importCsvBtn {
   flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 16px;
-  background: #f6f1e5;
-  padding: 12px 16px;
+  background: #fbf7ee;
+  padding: 12px 18px;
   border-radius: var(--radius-md);
-  border: 1.5px solid var(--dune);
+  border: 2px solid var(--dune);
+  box-shadow: 0 3px 0 var(--dune);
 }
 .twp-sync-filter {
   display: inline-flex;
@@ -2401,52 +2429,88 @@ label#importCsvBtn {
 .twp-sync-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-family: var(--font-sans);
+  font-size: 13.5px;
   text-align: left;
 }
 .twp-sync-table th {
-  background: #ede6d4;
-  padding: 12px 16px;
-  font-weight: 700;
-  color: var(--umber);
+  background: #ebdcc8;
+  padding: 13px 16px;
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--dune);
   border-bottom: 2px solid var(--dune);
+  white-space: nowrap;
 }
 .twp-sync-table td {
-  padding: 12px 16px;
+  padding: 13px 16px;
   border-bottom: 1px solid #ebd9c8;
   vertical-align: middle;
+  color: var(--ink);
 }
 .twp-sync-table tr:last-child td {
   border-bottom: none;
 }
 .twp-sync-table tr:hover {
-  background: rgba(247, 195, 104, 0.08);
+  background: rgba(247, 195, 104, 0.12);
 }
 .twp-chip {
   display: inline-block;
-  padding: 2px 10px;
+  padding: 3px 10px;
   border-radius: var(--radius-pill);
-  font-size: 11.5px;
-  font-weight: 700;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 800;
   text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 .twp-chip--ok {
   background: #dcfce7;
   color: #15803d;
-  border: 1px solid #86efac;
+  border: 1.5px solid #86efac;
 }
 .twp-chip--del {
   background: #fee2e2;
   color: #b91c1c;
-  border: 1px solid #fca5a5;
+  border: 1.5px solid #fca5a5;
 }
-.twp-record-preview {
-  display: inline-block;
-  max-width: 320px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--ink-soft);
-  font-family: monospace;
-  font-size: 12.5px;
+.twp-record-attr-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+  max-width: 480px;
+}
+.twp-record-attr-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: #f4ecdc;
+  border: 1px solid #dcceb7;
+  border-radius: 6px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--ink);
+}
+.twp-record-attr-chip b {
+  color: var(--umber);
+  font-weight: 700;
+  text-transform: capitalize;
+}
+.twp-cust-attr-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  background: #eef7f2;
+  border: 1px solid #c2e2d0;
+  border-radius: 4px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: #1b5336;
 }
