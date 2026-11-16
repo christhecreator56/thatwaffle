@@ -10,11 +10,21 @@ import signal
 import logging
 import argparse
 import threading
-from .config import AgentConfig
-from .excel_reader import read_all_configured_sheets
-from .file_watcher import WorkbookWatcher
-from .retry_queue import RetryQueue
-from .sync_client import SyncClient
+try:
+    from .config import AgentConfig
+    from .excel_reader import read_all_configured_sheets
+    from .file_watcher import WorkbookWatcher
+    from .retry_queue import RetryQueue
+    from .sync_client import SyncClient
+except (ImportError, ValueError):
+    _curr_dir = os.path.dirname(os.path.abspath(__file__))
+    if _curr_dir not in sys.path:
+        sys.path.insert(0, _curr_dir)
+    from config import AgentConfig
+    from excel_reader import read_all_configured_sheets
+    from file_watcher import WorkbookWatcher
+    from retry_queue import RetryQueue
+    from sync_client import SyncClient
 
 logger = logging.getLogger("sync_agent")
 
@@ -85,6 +95,10 @@ class SyncAgent:
 
             for w in warnings:
                 logger.warning(f"[{sheet_name}] {w}")
+
+            # If sheet was not present in the workbook at all, skip enqueueing
+            if not content_hash and not records and any("not found in workbook" in w for w in warnings):
+                continue
 
             # Check if content has changed since last sync
             previous_hash = self.last_sheet_hashes.get(sheet_name)
