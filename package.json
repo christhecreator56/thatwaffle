@@ -1,0 +1,14 @@
+{
+  "name": "thatwaffle-site",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "That Waffle Place production web application on Cloudflare",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^3.114.0"
+  }
+}
