@@ -105,9 +105,13 @@ def handle_post(table, data):
     if table not in db:
         db[table] = []
 
-    items = data if isinstance(data, list) else [data]
+    is_batch = isinstance(data, list)
+    items = data if is_batch else [data]
     created = []
     now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    # Pre-calculate existing normalized phone numbers for customers
+    existing_phones = set(_normalize_phone(r.get('phone')) for r in db[table] if r.get('phone')) if table == 'customers' else set()
 
     for item in items:
         record = dict(item)
@@ -122,13 +126,16 @@ def handle_post(table, data):
         if 'created_at' not in record:
             record['created_at'] = now_iso
 
-        # Upsert if phone already exists in customers
+        # Mobile number is the PRIMARY KEY: deduplicate against existing and batch
         if table == 'customers' and 'phone' in record:
-            existing_idx = next((i for i, r in enumerate(db[table]) if r.get('phone') == record['phone']), None)
-            if existing_idx is not None:
-                db[table][existing_idx].update(record)
-                created.append(db[table][existing_idx])
-                continue
+            clean_phone = _normalize_phone(record.get('phone'))
+            if clean_phone:
+                if clean_phone in existing_phones:
+                    if not is_batch:
+                        return 409, {'message': f"Customer with mobile number {record.get('phone')} already exists."}
+                    # For batch import, skip duplicate number and continue with remaining
+                    continue
+                existing_phones.add(clean_phone)
 
         db[table].append(record)
         created.append(record)

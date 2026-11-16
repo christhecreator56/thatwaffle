@@ -75,7 +75,8 @@ input[type=file]{font:inherit;font-size:15px;max-width:100%}
   gap: var(--space-2);
   margin-bottom: 8px;
 }
-.wa-time-field__top label {
+.wa-time-field__top label,
+.wa-time-field__top .twp-label {
   font-weight: 800;
   font-size: 15px;
   color: var(--dune);
@@ -177,7 +178,8 @@ input[type=file]{font:inherit;font-size:15px;max-width:100%}
   gap: 6px;
   margin-bottom: 4px;
 }
-.date-field-header label {
+.date-field-header label,
+.date-field-header .twp-label {
   font-weight: 800;
   font-size: 15px;
   color: var(--dune);
@@ -2290,7 +2292,7 @@ input[type=file]{font:inherit;font-size:15px;max-width:100%}
   outline-offset: 4px;
   background: rgba(247, 195, 104, 0.14);
 }
-label#importCsvBtn {
+#importCsvBtn {
   cursor: pointer;
   user-select: none;
 }

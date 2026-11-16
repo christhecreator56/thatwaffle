@@ -36,6 +36,7 @@ test_*.png
 # Node & deployment builds
 node_modules/
 .vercel/
+.wrangler/
 .claude/
 
 # Operating System & IDE metadata
