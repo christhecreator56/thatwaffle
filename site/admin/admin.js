@@ -60,6 +60,153 @@
   }
   function must(r) { if (r.error) throw r.error; return r.data; }
 
+  function parseJsonResponse(r) {
+    return r.text().then(function (text) {
+      var data = null;
+      try { data = text ? JSON.parse(text) : null; } catch (_) {}
+      if (!r.ok) {
+        var msg = (data && (data.error || data.message)) ||
+          ('API error (HTTP ' + r.status + ')' + (r.status === 404 ? ': Backend endpoint not found.' : ''));
+        throw new Error(msg);
+      }
+      if (!data) {
+        throw new Error('Received empty response from server.');
+      }
+      return data;
+    });
+  }
+
+  /* Direct Meta Cloud API Dispatch Engine (Zero Backend Dependency) */
+  var WA_CONFIG = {
+    token: (typeof localStorage !== 'undefined' && localStorage.getItem('twp_meta_wa_token')) || '',
+    phoneId: '1465237300010288'
+  };
+
+  // Auto-fetch credentials securely on local environment if not set in localStorage
+  if (!WA_CONFIG.token && typeof fetch !== 'undefined') {
+    fetch('/api/whatsapp-token').then(function (r) {
+      return r.json();
+    }).then(function (d) {
+      if (d && d.token) {
+        WA_CONFIG.token = d.token;
+        if (d.phone_id) WA_CONFIG.phoneId = d.phone_id;
+      }
+    }).catch(function () {});
+  }
+
+  function sendMetaWhatsApp(opts) {
+    var rawPhone = (opts.to || '').replace(/\D/g, '');
+    if (rawPhone.startsWith('0091') && rawPhone.length === 14) rawPhone = rawPhone.slice(4);
+    else if (rawPhone.startsWith('91') && rawPhone.length === 12) rawPhone = rawPhone.slice(2);
+    else if (rawPhone.startsWith('0') && rawPhone.length === 11) rawPhone = rawPhone.slice(1);
+    if (rawPhone.length === 10) rawPhone = '91' + rawPhone;
+
+    if (!rawPhone || rawPhone.length < 10) {
+      return Promise.reject(new Error('Invalid mobile phone number.'));
+    }
+
+    var custName = (opts.customer_name || '').trim() || 'Valued Customer';
+    var offerName = (opts.offer_name || '').trim() || 'Weekend Special';
+    var disc = (opts.discount || '').trim() || 'Special discount';
+    var validity = opts.validity || ((opts.starts_on && opts.ends_on) ? (day(opts.starts_on) + ' to ' + day(opts.ends_on)) : 'Limited time');
+    validity = (validity || '').trim() || 'Limited time';
+    var tms = (opts.terms || '').trim() || 'Terms apply.';
+
+    // Meta WhatsApp Cloud API rule:
+    // Outbound messages outside 24h window (without customer sending 'Hi' first)
+    // MUST use an approved Meta template (twp_offer_broadcast).
+    var payload = {
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: rawPhone,
+      type: 'template',
+      template: {
+        name: 'twp_offer_broadcast',
+        language: { code: 'en' },
+        components: [
+          {
+            type: 'body',
+            parameters: [
+              { type: 'text', text: custName },
+              { type: 'text', text: offerName },
+              { type: 'text', text: disc },
+              { type: 'text', text: validity },
+              { type: 'text', text: tms }
+            ]
+          }
+        ]
+      }
+    };
+
+    var metaUrl = 'https://graph.facebook.com/v21.0/' + WA_CONFIG.phoneId + '/messages';
+    return fetch(metaUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Bearer ' + WA_CONFIG.token,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    }).then(function (r) {
+      return r.json().then(function (data) {
+        if (!r.ok) {
+          var err = (data && data.error && data.error.message) || ('Meta API error (' + r.status + ')');
+          throw new Error(err);
+        }
+        var msgId = (data.messages && data.messages[0] && data.messages[0].id) || 'wamid.sent';
+        return { success: true, message_id: msgId, mode: 'meta_live' };
+      });
+    });
+  }
+
+  function dispatchMetaBroadcast(broadcastId, offer, subList) {
+    var targets = (subList && subList.length) ? subList : customers.filter(function (c) { return c.is_subscribed; });
+    if (!targets.length) {
+      return Promise.reject(new Error('No subscribed customers found in CRM. Add customers first.'));
+    }
+
+    var sent = 0;
+    var failed = 0;
+    var chain = Promise.resolve();
+
+    targets.forEach(function (c) {
+      chain = chain.then(function () {
+        return sendMetaWhatsApp({
+          to: c.phone,
+          customer_name: c.name,
+          offer_name: offer.name,
+          discount: offer.discount,
+          starts_on: offer.starts_on,
+          ends_on: offer.ends_on,
+          terms: offer.terms,
+          custom_message: offer.custom_message
+        }).then(function () {
+          sent++;
+        }).catch(function (err) {
+          console.warn('WhatsApp dispatch failed for ' + c.phone, err);
+          failed++;
+        });
+      });
+    });
+
+    return chain.then(function () {
+      if (broadcastId) {
+        db.from('broadcasts').update({
+          status: sent > 0 ? 'completed' : 'failed',
+          total_recipients: targets.length,
+          sent_count: sent,
+          failed_count: failed,
+          completed_at: new Date().toISOString()
+        }).eq('id', broadcastId).then(function () {}).catch(function (e) {
+          console.warn('Broadcast status DB update skipped:', e);
+        });
+      }
+      if (sent === 0 && failed > 0) {
+        throw new Error('Failed to deliver to ' + failed + ' recipient(s). Check customer phone numbers.');
+      }
+      return { success: true, sent: sent, failed: failed, total: targets.length };
+    });
+  }
+
   /* TWP Brand Loading & Skeleton Animation System */
   function showActionLoader(title, subtitle) {
     var ldr = $('actionLoader');
@@ -410,18 +557,47 @@
   /* Generic Row Builder */
   function row(imgUrl, title, pills, sub, onEdit, onDelete, extraBtns) {
     var li = el('li');
-    if (imgUrl) { var i = el('img'); i.src = src(imgUrl); i.alt = ''; li.appendChild(i); } else li.appendChild(el('span', 'noimg'));
-    var text = el('div');
-    text.appendChild(el('b', '', title));
-    var meta = el('small');
-    pills.forEach(function (p) {
-      var cls = 'pill';
-      if (p.cls) cls += ' ' + p.cls;
-      else if (p.on) cls += ' pill--on';
-      meta.appendChild(el('span', cls, p.text));
-    });
-    meta.appendChild(document.createTextNode(sub));
-    text.appendChild(meta);
+    if (imgUrl) {
+      var i = el('img');
+      i.src = src(imgUrl);
+      i.alt = '';
+      li.appendChild(i);
+    } else {
+      li.appendChild(el('span', 'noimg'));
+    }
+
+    var text = el('div', 'list-info');
+
+    // Header line: Title + Primary Status Pill (e.g. Live, Showing, Active)
+    var header = el('div', 'list-header');
+    header.appendChild(el('b', 'list-title', title));
+
+    var primaryPill = (pills && pills.length && !pills[0].cls) ? pills[0] : null;
+    var otherPills = primaryPill ? pills.slice(1) : (pills || []);
+
+    if (primaryPill) {
+      var pcls = 'pill';
+      if (primaryPill.on) pcls += ' pill--on';
+      header.appendChild(el('span', pcls, primaryPill.text));
+    }
+    text.appendChild(header);
+
+    // Secondary / Broadcast Pills (e.g. WhatsApp Scheduled, WhatsApp Sent)
+    if (otherPills.length) {
+      var pillsWrap = el('div', 'list-pills');
+      otherPills.forEach(function (p) {
+        var cls = 'pill';
+        if (p.cls) cls += ' ' + p.cls;
+        else if (p.on) cls += ' pill--on';
+        pillsWrap.appendChild(el('span', cls, p.text));
+      });
+      text.appendChild(pillsWrap);
+    }
+
+    // Subtitle (Dates, Price, Phone)
+    if (sub) {
+      text.appendChild(el('div', 'list-sub', sub));
+    }
     li.appendChild(text);
 
     var acts = el('div', 'acts');
@@ -557,82 +733,77 @@
       var b = getOfferBroadcast(o.id);
       var extraBtns = [];
 
-      if (b) {
-        if (b.status === 'completed') {
-          if ((b.total_recipients || 0) === 0) {
-            pills.push({ text: 'WhatsApp: 0 Customers in CRM', cls: 'pill--failed' });
-          } else {
-            pills.push({ text: 'WhatsApp Sent (' + (b.sent_count || 0) + '/' + (b.total_recipients || 0) + ')', cls: 'pill--broadcast' });
-          }
-        } else if (b.status === 'scheduled') {
-          pills.push({ text: 'WhatsApp Scheduled: ' + formatDateTime(b.scheduled_at), cls: 'pill--scheduled' });
-          var sendNow = el('button', 'acts__primary', 'Drop now');
-          sendNow.type = 'button';
-          sendNow.title = 'Send this WhatsApp broadcast immediately to all customers';
-          sendNow.addEventListener('click', function () { dispatchBroadcastNow(b.id, o.name); });
-          extraBtns.push(sendNow);
-        } else if (b.status === 'processing') {
-          pills.push({ text: 'WhatsApp Sending...', cls: 'pill--scheduled' });
-        } else if (b.status === 'failed') {
-          pills.push({ text: 'WhatsApp Failed', cls: 'pill--failed' });
-        }
+      if (b && b.status === 'scheduled') {
+        pills.push({ text: 'WhatsApp Scheduled: ' + formatDateTime(b.scheduled_at), cls: 'pill--scheduled' });
+        var sendNow = el('button', 'acts__primary', 'Drop now');
+        sendNow.type = 'button';
+        sendNow.title = 'Send this WhatsApp broadcast immediately to all customers';
+        sendNow.addEventListener('click', function () { dispatchBroadcastNow(b.id, o); });
+        extraBtns.push(sendNow);
       } else {
-        var quickB = el('button', '', 'WhatsApp Drop');
-        quickB.type = 'button';
-        quickB.title = 'Schedule or send WhatsApp broadcast for this offer';
-        quickB.addEventListener('click', function () { openOffer(o); $('o-broadcast').checked = true; toggleBroadcastSection(); });
-        extraBtns.push(quickB);
-      }
-
-      // Direct WhatsApp broadcast to all customers
-      var broadcastBtn = el('button', 'acts__primary', 'WhatsApp to Customers');
-      broadcastBtn.type = 'button';
-      broadcastBtn.title = 'Send this offer via WhatsApp to all subscribed customers';
-      broadcastBtn.addEventListener('click', function () {
-        var subList = customers.filter(function (c) { return c.is_subscribed; });
-        var subCount = subList.length;
-        if (subCount === 0) {
-          toast('No subscribed customers found in CRM. Add customers or import a CSV first.');
-          return;
+        if (b) {
+          if (b.status === 'completed') {
+            if ((b.total_recipients || 0) === 0) {
+              pills.push({ text: 'WhatsApp: 0 Customers in CRM', cls: 'pill--failed' });
+            } else {
+              pills.push({ text: 'WhatsApp Sent (' + (b.sent_count || 0) + '/' + (b.total_recipients || 0) + ')', cls: 'pill--broadcast' });
+            }
+          } else if (b.status === 'processing') {
+            pills.push({ text: 'WhatsApp Sending...', cls: 'pill--scheduled' });
+          } else if (b.status === 'failed') {
+            pills.push({ text: 'WhatsApp Failed', cls: 'pill--failed' });
+          }
         }
-        askConfirm({
-          title: 'Broadcast Offer to Customers?',
-          message: 'Send "' + o.name + '" (' + o.discount + ') via WhatsApp to ' + subCount + ' subscribed customer(s) right now?',
-          confirmText: 'Send to ' + subCount + ' Customers',
-          tone: 'wa'
-        }).then(function (ok) {
-          if (!ok) return;
-          showActionLoader('Broadcasting WhatsApp Offer...', 'Delivering "' + o.name + '" to your ' + subCount + ' customer subscribers...');
-          var b = getOfferBroadcast(o.id);
-          var bId = b ? b.id : null;
-          var p = bId 
-            ? Promise.resolve({ id: bId })
-            : db.from('broadcasts').insert({
-                offer_id: o.id,
-                offer_name: o.name,
-                discount: o.discount,
-                status: 'scheduled',
-                scheduled_at: new Date().toISOString()
-              }).select('id').then(function (res) { return (must(res) || [{}])[0]; });
 
-          p.then(function (createdB) {
-            return fetch('/api/dispatch-broadcast', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ broadcast_id: createdB.id || bId })
+        // Direct WhatsApp broadcast to all customers
+        var broadcastBtn = el('button', 'acts__primary', 'WhatsApp to Customers');
+        broadcastBtn.type = 'button';
+        broadcastBtn.title = 'Send this offer via WhatsApp to all subscribed customers';
+        broadcastBtn.addEventListener('click', function () {
+          var subList = customers.filter(function (c) { return c.is_subscribed; });
+          var subCount = subList.length;
+          if (subCount === 0) {
+            toast('No subscribed customers found in CRM. Add customers or import a CSV first.');
+            return;
+          }
+          askConfirm({
+            title: 'Broadcast Offer to Customers?',
+            message: 'Send "' + o.name + '" (' + o.discount + ') via WhatsApp to ' + subCount + ' subscribed customer(s) right now?',
+            confirmText: 'Send to ' + subCount + ' Customers',
+            tone: 'wa'
+          }).then(function (ok) {
+            if (!ok) return;
+            showActionLoader('Broadcasting WhatsApp Offer...', 'Delivering "' + o.name + '" to your ' + subCount + ' customer subscribers...');
+            var curB = getOfferBroadcast(o.id);
+            var bId = curB ? curB.id : null;
+            var p = bId 
+              ? Promise.resolve({ id: bId })
+              : db.from('broadcasts').insert({
+                  offer_id: o.id,
+                  status: 'scheduled',
+                  scheduled_at: new Date().toISOString()
+                }).select('id').then(function (res) {
+                  var d = res && res.data;
+                  return (d && d[0]) || {};
+                }).catch(function (dbErr) {
+                  console.warn('DB broadcast insert skipped:', dbErr);
+                  return {};
+                });
+
+            p.then(function (createdB) {
+              return dispatchMetaBroadcast((createdB && createdB.id) || bId, o, subList);
+            }).then(function (res) {
+              toast('Offer sent to ' + (res.sent || subCount) + ' customer(s) successfully via WhatsApp Cloud API!');
+              loadOffers();
+            }).catch(function (e) {
+              toast('Broadcast error: ' + e.message);
+            }).finally(function () {
+              hideActionLoader();
             });
-          }).then(function (r) { return r.json(); }).then(function (res) {
-            if (res.error) throw new Error(res.error);
-            toast('Offer sent to ' + (res.sent || subCount) + ' customer(s) successfully!');
-            loadOffers();
-          }).catch(function (e) {
-            toast('Broadcast error: ' + e.message);
-          }).finally(function () {
-            hideActionLoader();
           });
         });
-      });
-      extraBtns.unshift(broadcastBtn);
+        extraBtns.push(broadcastBtn);
+      }
 
       var sub = o.discount + ' · ' + day(o.starts_on) + ' to ' + day(o.ends_on);
       list.appendChild(row(o.poster_url, o.name, pills, sub,
@@ -1518,63 +1689,70 @@
   }
 
   /* Instant Test Message */
-  $('sendTestBtn').addEventListener('click', function () {
-    var testMsg = $('testMsg');
-    testMsg.textContent = '';
-    if (!validateOfferDates()) {
-      testMsg.textContent = 'End date cannot be before start date.';
-      $('offerMsg').textContent = 'End date cannot be before start date.';
-      return ($('o-end-trigger') || $('o-end')).focus();
-    }
-    var rawPhone = $('testPhone').value.trim().replace(/\D/g, '');
-    if (!/^[0-9]{10}$/.test(rawPhone) && !/^[0-9]{11,15}$/.test(rawPhone)) {
-      testMsg.textContent = 'Enter a valid 10-digit mobile number.';
-      return $('testPhone').focus();
-    }
-    var phone = rawPhone.length === 10 ? ('+91' + rawPhone) : ('+' + rawPhone);
-    this.disabled = true;
-    testMsg.textContent = 'Sending test to ' + phone + '...';
+  var sendTestBtn = $('sendTestBtn');
+  if (sendTestBtn) {
+    sendTestBtn.addEventListener('click', function () {
+      var testMsg = $('testMsg');
+      if (testMsg) testMsg.textContent = '';
+      if (!validateOfferDates()) {
+        if (testMsg) testMsg.textContent = 'End date cannot be before start date.';
+        $('offerMsg').textContent = 'End date cannot be before start date.';
+        return ($('o-end-trigger') || $('o-end')).focus();
+      }
+      var testPhoneInput = $('testPhone');
+      var rawPhone = testPhoneInput ? testPhoneInput.value.trim().replace(/\D/g, '') : '';
+      if (!/^[0-9]{10}$/.test(rawPhone) && !/^[0-9]{11,15}$/.test(rawPhone)) {
+        if (testMsg) testMsg.textContent = 'Enter a valid 10-digit mobile number.';
+        return testPhoneInput ? testPhoneInput.focus() : null;
+      }
+      var phone = rawPhone.length === 10 ? ('+91' + rawPhone) : ('+' + rawPhone);
+      this.disabled = true;
+      if (testMsg) testMsg.textContent = 'Sending test to ' + phone + '...';
 
-    var payload = {
-      to: phone,
-      offer_name: $('o-name').value.trim() || 'WEEEKEND OFFER',
-      discount: $('o-discount').value.trim() || '10% off',
-      starts_on: $('o-start').value || today(),
-      ends_on: $('o-end').value || today(),
-      terms: $('o-terms').value.trim() || 'Terms apply.',
-      poster_url: posterUploader.hasExisting() ? posterUploader.getUrl() : '',
-      custom_message: $('o-custom-msg') ? $('o-custom-msg').value.trim() : '',
-      is_test: true
-    };
+      var payload = {
+        to: phone,
+        offer_name: $('o-name').value.trim() || 'WEEEKEND OFFER',
+        discount: $('o-discount').value.trim() || '10% off',
+        starts_on: $('o-start').value || today(),
+        ends_on: $('o-end').value || today(),
+        terms: $('o-terms').value.trim() || 'Terms apply.',
+        poster_url: posterUploader.hasExisting() ? posterUploader.getUrl() : '',
+        custom_message: $('o-custom-msg') ? $('o-custom-msg').value.trim() : '',
+        is_test: true
+      };
 
-    var selectedFile = posterUploader.getFile();
-    var readPoster = selectedFile ? new Promise(function (resolve) {
-      var fr = new FileReader();
-      fr.onload = function () { resolve(fr.result || ''); };
-      fr.onerror = function () { resolve(''); };
-      fr.readAsDataURL(selectedFile);
-    }) : Promise.resolve('');
+      var selectedFile = posterUploader.getFile();
+      var readPoster = selectedFile ? new Promise(function (resolve) {
+        var fr = new FileReader();
+        fr.onload = function () { resolve(fr.result || ''); };
+        fr.onerror = function () { resolve(''); };
+        fr.readAsDataURL(selectedFile);
+      }) : Promise.resolve('');
 
-    readPoster.then(function (dataUrl) {
-      if (dataUrl) payload.poster_data_url = dataUrl;
-      return fetch('/api/send-whatsapp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+      readPoster.then(function (dataUrl) {
+        if (dataUrl) payload.poster_data_url = dataUrl;
+        return sendMetaWhatsApp(payload);
+      }).then(function (res) {
+        if (testMsg) testMsg.textContent = '✅ Test message sent via Meta Cloud API (' + (res.message_id || 'sent') + ')';
+        toast('Test WhatsApp sent to ' + phone);
+      }).catch(function (e) {
+        if (testMsg) testMsg.textContent = '❌ ' + e.message;
+        toast('Test failed: ' + e.message);
+      }).finally(function () {
+        if ($('sendTestBtn')) $('sendTestBtn').disabled = false;
       });
-    }).then(function (r) { return r.json(); }).then(function (res) {
-      if (res.error) throw new Error(res.error);
-      testMsg.textContent = '✅ ' + (res.message || 'Test message sent successfully!');
-      toast('Test WhatsApp sent to ' + phone);
-    }).catch(function (e) {
-      testMsg.textContent = '❌ ' + e.message;
-    }).finally(function () {
-      $('sendTestBtn').disabled = false;
     });
-  });
+  }
 
   /* Dispatch Broadcast Now */
-  function dispatchBroadcastNow(broadcastId, offerName) {
+  function dispatchBroadcastNow(broadcastId, offerOrName) {
+    var offer = (typeof offerOrName === 'object' && offerOrName)
+      ? offerOrName
+      : (offers.find(function (x) { return x.id === (broadcasts.find(function (b) { return b.id === broadcastId; }) || {}).offer_id; }) ||
+         offers.find(function (x) { return x.name === offerOrName; }) ||
+         { name: offerOrName || 'Offer' });
+    var offerName = offer.name || 'Offer';
+
     askConfirm({
       title: 'Drop WhatsApp Broadcast?',
       message: 'Send the WhatsApp broadcast for "' + offerName + '" to all subscribed customers right now.',
@@ -1583,13 +1761,14 @@
     }).then(function (ok) {
       if (!ok) return;
       showActionLoader('Dispatching WhatsApp broadcast...', 'Broadcasting "' + offerName + '" to your customer subscribers...');
-      fetch('/api/dispatch-broadcast', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ broadcast_id: broadcastId })
-      }).then(function (r) { return r.json(); }).then(function (res) {
-        if (res.error) throw new Error(res.error);
-        toast('Broadcast complete: ' + res.sent + ' messages sent');
+      var subList = customers.filter(function (c) { return c.is_subscribed; });
+      if (!subList.length) {
+        hideActionLoader();
+        toast('No subscribed customers found in CRM.');
+        return;
+      }
+      dispatchMetaBroadcast(broadcastId, offer, subList).then(function (res) {
+        toast('Broadcast complete: ' + res.sent + ' messages sent' + (res.failed ? ', ' + res.failed + ' failed' : ''));
         loadOffers();
       }).catch(function (e) {
         toast('Broadcast error: ' + e.message);
@@ -1618,7 +1797,7 @@
     $('o-terms').value = o ? o.terms : '';
     $('o-visible').checked = o ? o.is_visible : true;
     $('offerMsg').textContent = '';
-    $('testMsg').textContent = '';
+    if ($('testMsg')) $('testMsg').textContent = '';
 
     if (o && o.poster_url) {
       posterUploader.setExisting(o.poster_url);
@@ -1734,32 +1913,50 @@
             var bRow = {
               offer_id: savedOffer.id,
               scheduled_at: scheduledIso,
-              status: sendImmediately ? 'processing' : 'scheduled',
-              offer_name: savedOffer.name,
-              discount: savedOffer.discount,
-              starts_on: savedOffer.starts_on,
-              ends_on: savedOffer.ends_on,
-              terms: savedOffer.terms,
-              poster_url: savedOffer.poster_url || '',
-              custom_message: customMsgVal
+              status: sendImmediately ? 'processing' : 'scheduled'
             };
-            var bp = existingScheduled ?
-              db.from('broadcasts').update(bRow).eq('id', existingScheduled.id).select() :
-              db.from('broadcasts').insert(bRow).select();
+
+            function saveBroadcastWithFallback(row) {
+              var req = existingScheduled ?
+                db.from('broadcasts').update(row).eq('id', existingScheduled.id).select('id') :
+                db.from('broadcasts').insert(row).select('id');
+
+              return req.then(function (br) {
+                if (br.error) {
+                  console.warn('Broadcast save warning, retrying minimal:', br.error);
+                  var minimal = {
+                    offer_id: row.offer_id,
+                    scheduled_at: row.scheduled_at,
+                    status: row.status
+                  };
+                  var retry = existingScheduled ?
+                    db.from('broadcasts').update(minimal).eq('id', existingScheduled.id).select('id') :
+                    db.from('broadcasts').insert(minimal).select('id');
+                  return retry.then(function (r2) {
+                    if (r2.error) {
+                      console.warn('Broadcast record skipped:', r2.error);
+                      return { data: [{ id: existingScheduled ? existingScheduled.id : null }] };
+                    }
+                    return r2;
+                  });
+                }
+                return br;
+              }).catch(function (e) {
+                console.warn('Broadcast catch skipped:', e);
+                return { data: [{ id: existingScheduled ? existingScheduled.id : null }] };
+              });
+            }
+
+            var bp = saveBroadcastWithFallback(bRow);
 
             return bp.then(function (br) {
-              var savedB = (br && br.data && br.data[0]) || (must(br)[0]);
+              var savedB = (br && br.data && br.data[0]) || (br && br[0]) || null;
               var broadcastId = savedB ? savedB.id : (existingScheduled ? existingScheduled.id : null);
-              if (sendImmediately && broadcastId) {
+              if (sendImmediately) {
                 if (sendNowBtn) sendNowBtn.textContent = 'Dispatching WhatsApp...';
-                return fetch('/api/dispatch-broadcast', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ broadcast_id: broadcastId })
-                }).then(function (resp) {
-                  return resp.json();
-                }).then(function (res) {
-                  if (res.error) throw new Error(res.error);
+                var subList = customers.filter(function (c) { return c.is_subscribed; });
+                savedOffer.custom_message = customMsgVal;
+                return dispatchMetaBroadcast(broadcastId, savedOffer, subList).then(function (res) {
                   return { sendImmediately: true, sent: res.sent, failed: res.failed, total: res.total };
                 });
               }
@@ -1850,31 +2047,20 @@
     }).then(function (ok) {
       if (!ok) return;
       showActionLoader('Sending offer...', 'Delivering offer to ' + c.name + ' (' + c.phone + ')...');
-      fetch('/api/send-whatsapp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: cleanPhone,
-          customer_name: c.name,
-          offer_name: activeOffer.name,
-          discount: activeOffer.discount,
-          validity: day(activeOffer.starts_on) + ' to ' + day(activeOffer.ends_on),
-          terms: activeOffer.terms || 'Terms apply.',
-          poster_url: activeOffer.poster_url || '',
-          custom_message: offerText
-        })
-      }).then(function (r) { return r.json(); }).then(function (res) {
-        if (res.success) {
-          toast('Offer sent to ' + c.name + '! (' + res.mode + ')');
-        } else {
-          var waUrl = 'https://wa.me/' + cleanPhone + '?text=' + encodeURIComponent(offerText);
-          window.open(waUrl, '_blank');
-          toast('Opened WhatsApp for ' + c.name);
-        }
-      }).catch(function () {
-        var waUrl = 'https://wa.me/' + cleanPhone + '?text=' + encodeURIComponent(offerText);
-        window.open(waUrl, '_blank');
-        toast('Opened WhatsApp for ' + c.name);
+      sendMetaWhatsApp({
+        to: cleanPhone,
+        customer_name: c.name,
+        offer_name: activeOffer.name,
+        discount: activeOffer.discount,
+        starts_on: activeOffer.starts_on,
+        ends_on: activeOffer.ends_on,
+        terms: activeOffer.terms || 'Terms apply.',
+        poster_url: activeOffer.poster_url || '',
+        custom_message: offerText
+      }).then(function (res) {
+        toast('✅ Offer delivered to ' + c.name + ' via WhatsApp Cloud API!');
+      }).catch(function (e) {
+        toast('❌ WhatsApp API error: ' + e.message);
       }).finally(function () {
         hideActionLoader();
       });

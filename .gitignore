@@ -36,6 +36,8 @@ node_modules/
 .vercel/
 .wrangler/
 .claude/
+dist_pages/
+*.zip
 
 # Operating System & IDE metadata
 .DS_Store

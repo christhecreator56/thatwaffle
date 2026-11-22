@@ -1,0 +1,108 @@
+/**
+ * Cloudflare Pages Function: /api/send-whatsapp
+ * Dispatches live WhatsApp test/offer messages via Meta Cloud API v21.0
+ */
+
+const DEFAULT_WA_TOKEN = "";
+const DEFAULT_PHONE_ID = "1465237300010288";
+
+function corsHeaders(request) {
+  return {
+    "Access-Control-Allow-Origin": request ? (request.headers.get("Origin") || "*") : "*",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Content-Type": "application/json"
+  };
+}
+
+export async function onRequestOptions(context) {
+  return new Response(null, {
+    status: 204,
+    headers: corsHeaders(context.request)
+  });
+}
+
+export async function onRequestPost(context) {
+  const { request, env } = context;
+  try {
+    const data = await request.json();
+    const token = (env && env.WHATSAPP_TOKEN) || DEFAULT_WA_TOKEN;
+    const phoneId = (env && env.WHATSAPP_PHONE_NUMBER_ID) || DEFAULT_PHONE_ID;
+
+    let cleaned = (data.to || '').replace(/\D/g, '');
+    if (cleaned.startsWith('0091') && cleaned.length === 14) cleaned = cleaned.slice(4);
+    else if (cleaned.startsWith('91') && cleaned.length === 12) cleaned = cleaned.slice(2);
+    else if (cleaned.startsWith('0') && cleaned.length === 11) cleaned = cleaned.slice(1);
+    if (cleaned.length === 10) cleaned = '91' + cleaned;
+
+    if (!cleaned || cleaned.length < 10) {
+      return new Response(JSON.stringify({ success: false, error: "Invalid recipient mobile number." }), {
+        status: 400,
+        headers: corsHeaders(request)
+      });
+    }
+
+    const custName = (data.customer_name || '').trim() || 'Valued Customer';
+    const offerName = (data.offer_name || '').trim() || 'Weekend Special';
+    const disc = (data.discount || '').trim() || 'Special discount';
+    const validity = (data.starts_on && data.ends_on) ? `${data.starts_on} to ${data.ends_on}` : ((data.validity || '').trim() || 'Limited time');
+    const tms = (data.terms || '').trim() || 'Terms apply.';
+
+    const payload = {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: cleaned,
+      type: "template",
+      template: {
+        name: "twp_offer_broadcast",
+        language: { code: "en" },
+        components: [
+          {
+            type: "body",
+            parameters: [
+              { type: "text", text: custName },
+              { type: "text", text: offerName },
+              { type: "text", text: disc },
+              { type: "text", text: validity },
+              { type: "text", text: tms }
+            ]
+          }
+        ]
+      }
+    };
+
+    const metaRes = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const metaData = await metaRes.json();
+    if (!metaRes.ok) {
+      const err = (metaData && metaData.error && metaData.error.message) || `Meta API error (${metaRes.status})`;
+      return new Response(JSON.stringify({ success: false, error: err }), {
+        status: 400,
+        headers: corsHeaders(request)
+      });
+    }
+
+    const msgId = (metaData.messages && metaData.messages[0] && metaData.messages[0].id) || 'wamid.sent';
+    return new Response(JSON.stringify({
+      success: true,
+      message_id: msgId,
+      mode: "meta_live",
+      message: `Delivered via Meta Cloud API! ID: ${msgId}`
+    }), {
+      status: 200,
+      headers: corsHeaders(request)
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ success: false, error: err.message || 'Server error' }), {
+      status: 500,
+      headers: corsHeaders(request)
+    });
+  }
+}

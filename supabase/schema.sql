@@ -70,6 +70,7 @@ create table if not exists public.broadcasts (
   id uuid primary key default gen_random_uuid(),
   offer_id uuid references public.offers(id) on delete cascade,
   template_name text not null default 'twp_offer_broadcast',
+  custom_message text,
   scheduled_at timestamptz not null,
   status text not null default 'scheduled' check (status in ('draft', 'scheduled', 'processing', 'completed', 'failed', 'cancelled')),
   total_recipients integer not null default 0,
@@ -79,6 +80,9 @@ create table if not exists public.broadcasts (
   created_at timestamptz not null default now(),
   completed_at timestamptz
 );
+
+-- Migration for existing databases:
+alter table if exists public.broadcasts add column if not exists custom_message text;
 
 create table if not exists public.broadcast_logs (
   id uuid primary key default gen_random_uuid(),

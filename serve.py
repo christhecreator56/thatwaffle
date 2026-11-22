@@ -64,9 +64,9 @@ def get_wa_config():
 
     token = (local_cfg.get('token') or os.environ.get('WHATSAPP_TOKEN') or dotenv.get('WHATSAPP_TOKEN') or '').strip()
     phone_id = (local_cfg.get('phone_number_id') or os.environ.get('WHATSAPP_PHONE_NUMBER_ID') or dotenv.get('WHATSAPP_PHONE_NUMBER_ID') or '').strip()
-    delivery_mode = (local_cfg.get('delivery_mode') or os.environ.get('WHATSAPP_DELIVERY_MODE') or dotenv.get('WHATSAPP_DELIVERY_MODE') or 'text').strip()
+    delivery_mode = (local_cfg.get('delivery_mode') or os.environ.get('WHATSAPP_DELIVERY_MODE') or dotenv.get('WHATSAPP_DELIVERY_MODE') or 'twp_offer_broadcast').strip()
     if delivery_mode not in ('text', 'hello_world', 'twp_offer_broadcast'):
-        delivery_mode = 'text'
+        delivery_mode = 'twp_offer_broadcast'
 
     source = 'none'
     if local_cfg.get('token') and local_cfg.get('phone_number_id'):
@@ -289,7 +289,7 @@ def send_whatsapp_message(to_phone, offer_data, customer_name="Waffle Lover", is
     cfg = get_wa_config()
     wa_token = cfg['token']
     wa_phone_id = cfg['phone_number_id']
-    delivery_mode = (offer_data.get('delivery_mode') or cfg['delivery_mode'] or 'text').strip()
+    delivery_mode = (offer_data.get('delivery_mode') or cfg['delivery_mode'] or 'twp_offer_broadcast').strip()
 
     cleaned_phone = re.sub(r'\D', '', str(to_phone or ''))
     if len(cleaned_phone) == 10 and cleaned_phone[0] in '6789':
@@ -373,36 +373,55 @@ def send_whatsapp_message(to_phone, offer_data, customer_name="Waffle Lover", is
                 }
             }
     else:
-        components = []
+        # Default: Template mode (official Meta approved templates)
+        cust_name_safe = (customer_name or '').strip() or 'Valued Customer'
+        offer_name_safe = (offer_name or '').strip() or 'Weekend Special'
+        discount_safe = (discount or '').strip() or 'Special discount'
+        validity_safe = (validity or '').strip() or 'Limited time'
+        terms_safe = (terms or '').strip() or 'Terms apply.'
+        body_params = [
+            { "type": "text", "text": cust_name_safe },
+            { "type": "text", "text": offer_name_safe },
+            { "type": "text", "text": discount_safe },
+            { "type": "text", "text": validity_safe },
+            { "type": "text", "text": terms_safe }
+        ]
+
         img_param = resolve_image_param() if (wa_token and wa_phone_id) else None
         if img_param:
-            components.append({
-                "type": "header",
-                "parameters": [
-                    { "type": "image", "image": img_param }
-                ]
-            })
-        components.append({
-            "type": "body",
-            "parameters": [
-                { "type": "text", "text": customer_name },
-                { "type": "text", "text": offer_name },
-                { "type": "text", "text": discount },
-                { "type": "text", "text": validity },
-                { "type": "text", "text": terms }
-            ]
-        })
-        payload = {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": cleaned_phone,
-            "type": "template",
-            "template": {
-                "name": "twp_offer_broadcast",
-                "language": { "code": "en" },
-                "components": components
+            payload = {
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": cleaned_phone,
+                "type": "template",
+                "template": {
+                    "name": "twp_offer_poster",
+                    "language": { "code": "en" },
+                    "components": [
+                        {
+                            "type": "header",
+                            "parameters": [
+                                { "type": "image", "image": img_param }
+                            ]
+                        },
+                        { "type": "body", "parameters": body_params }
+                    ]
+                }
             }
-        }
+        else:
+            payload = {
+                "messaging_product": "whatsapp",
+                "recipient_type": "individual",
+                "to": cleaned_phone,
+                "type": "template",
+                "template": {
+                    "name": "twp_offer_broadcast",
+                    "language": { "code": "en" },
+                    "components": [
+                        { "type": "body", "parameters": body_params }
+                    ]
+                }
+            }
 
     if wa_token and wa_phone_id:
         try:
@@ -418,19 +437,50 @@ def send_whatsapp_message(to_phone, offer_data, customer_name="Waffle Lover", is
                 msg_id = res.get('messages', [{}])[0].get('id', str(uuid.uuid4()))
                 sent_kind = payload.get('type', delivery_mode)
                 print(f"[WHATSAPP LIVE META] Delivered ({sent_kind}) to +{cleaned_phone} | ID: {msg_id}", flush=True)
-                msg_note = (
-                    f"Accepted by Meta ({sent_kind}, ID: {msg_id}). If not received within 10s, send 'Hi' once from your phone to Meta's Test # to open the 24h window, or switch mode to hello_world."
-                    if delivery_mode == 'text'
-                    else f"Real WhatsApp sent ({sent_kind})! Meta ID: {msg_id}"
-                )
                 return {
                     "success": True,
                     "message_id": msg_id,
                     "mode": "meta_live",
-                    "delivery_mode": delivery_mode,
-                    "message": msg_note
+                    "delivery_mode": payload.get('template', {}).get('name', delivery_mode),
+                    "message": f"Real WhatsApp sent ({payload.get('template', {}).get('name', sent_kind)})! Meta ID: {msg_id}"
                 }
         except urllib.error.HTTPError as he:
+            # If image template is pending review (error 132001), fallback gracefully to twp_offer_broadcast
+            tmpl_name = payload.get('template', {}).get('name', '')
+            if payload.get('type') == 'template' and tmpl_name in ('twp_offer_poster', 'twp_offer_image'):
+                try:
+                    fallback_payload = {
+                        "messaging_product": "whatsapp",
+                        "recipient_type": "individual",
+                        "to": cleaned_phone,
+                        "type": "template",
+                        "template": {
+                            "name": "twp_offer_broadcast",
+                            "language": { "code": "en" },
+                            "components": [
+                                { "type": "body", "parameters": body_params }
+                            ]
+                        }
+                    }
+                    req_fb = urllib.request.Request(
+                        url,
+                        data=json.dumps(fallback_payload).encode('utf-8'),
+                        headers={"Authorization": f"Bearer {wa_token}", "Content-Type": "application/json"}
+                    )
+                    with urllib.request.urlopen(req_fb, timeout=15) as fb_resp:
+                        res = json.loads(fb_resp.read().decode('utf-8'))
+                        msg_id = res.get('messages', [{}])[0].get('id', str(uuid.uuid4()))
+                        print(f"[WHATSAPP LIVE META] Fallback twp_offer_broadcast delivered to +{cleaned_phone} | ID: {msg_id}", flush=True)
+                        return {
+                            "success": True,
+                            "message_id": msg_id,
+                            "mode": "meta_live",
+                            "delivery_mode": "twp_offer_broadcast",
+                            "message": f"Real WhatsApp sent (twp_offer_broadcast)! Meta ID: {msg_id}"
+                        }
+                except Exception as fb_err:
+                    print(f"[WHATSAPP FALLBACK ERROR] {fb_err}", flush=True)
+
             err_msg = _parse_meta_error(he)
             print(f"[WHATSAPP LIVE ERROR] {err_msg}", flush=True)
             return {"success": False, "error": err_msg, "mode": "meta_live", "delivery_mode": delivery_mode}
@@ -1708,6 +1758,20 @@ class WaffleRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(data)
             return
 
+        if path == '/api/whatsapp-token':
+            cfg = get_wa_config()
+            data = json.dumps({
+                "token": cfg['token'],
+                "phone_id": cfg['phone_number_id']
+            }).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(data)))
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(data)
+            return
+
         if path == '/api/send-whatsapp':
             accept = self.headers.get('Accept', '')
             if 'text/html' in accept:
@@ -1732,7 +1796,7 @@ class WaffleRequestHandler(http.server.SimpleHTTPRequestHandler):
                 "note": "This is an API endpoint. Send POST requests from the Admin Studio or via fetch to dispatch test WhatsApp messages.",
                 "example_post_payload": {
                     "to": "+919876543210",
-                    "delivery_mode": "text",
+                    "delivery_mode": "twp_offer_broadcast",
                     "name": "WEEEKEND OFFER",
                     "discount": "20% off",
                     "starts_on": "2026-11-14",
