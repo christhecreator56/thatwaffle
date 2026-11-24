@@ -659,17 +659,17 @@ input[type=file]{font:inherit;font-size:15px;max-width:100%}
 }
 
 .wa-studio {
-  display: grid;
-  grid-template-columns: 345px minmax(0, 1fr);
-  gap: var(--space-4);
-  align-items: start;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   width: 100%;
 }
 .wa-phone-wrap {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  min-width: 0;
+  width: 100%;
+  max-width: 380px;
 }
 .wa-phone-header-label {
   display: flex;
