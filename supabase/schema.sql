@@ -6,6 +6,9 @@ create table if not exists public.admins (
   email text primary key check (email = lower(email))
 );
 
+-- Registered production admin
+insert into public.admins (email) values ('sfourhospitality@gmail.com') on conflict (email) do nothing;
+
 create or replace function public.is_admin()
 returns boolean
 language sql

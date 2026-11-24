@@ -9,7 +9,7 @@ Official web application, brand design system, and automated WhatsApp marketing 
 > - **Meta App ID**: `1449920199851529`  
 > - **Engine Mode**: `meta_live` (Permanent System Token installed in `whatsapp.local.json`)  
 > - **Live Sender Dashboard**: [http://localhost:8080/api/send-whatsapp](http://localhost:8080/api/send-whatsapp)  
-> - **Admin Studio**: [http://localhost:8080/admin](http://localhost:8080/admin)  
+> - **Admin Studio**: [http://localhost:8080/admin](http://localhost:8080/admin) (Email: `sfourhospitality@gmail.com` | Pass: `twp@vad2026`)  
 
 ---
 
@@ -50,6 +50,9 @@ python serve.py
 Open your browser at:
 - **Customer Site**: [http://localhost:8080/](http://localhost:8080/)
 - **Admin Studio**: [http://localhost:8080/admin/](http://localhost:8080/admin/)
+  - **Email**: `sfourhospitality@gmail.com`
+  - **Password**: `twp@vad2026`
+  - **Features**: Includes password visibility toggle ("eye" icon) for secure inspection.
 - **WhatsApp Engine Console**: [http://localhost:8080/api/send-whatsapp](http://localhost:8080/api/send-whatsapp)
 
 ---

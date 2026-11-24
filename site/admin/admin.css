@@ -2306,3 +2306,51 @@ input[type=file]{font:inherit;font-size:15px;max-width:100%}
   cursor: pointer;
   user-select: none;
 }
+
+/* Password Visibility Toggle */
+.twp-input--password {
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+}
+.twp-input--password input {
+  padding-right: 46px !important;
+}
+.twp-pwd-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 44px;
+  height: 100%;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  color: var(--umber, #5a4538);
+  opacity: 0.75;
+  transition: opacity 0.15s ease, color 0.15s ease, transform 0.1s ease;
+  border-radius: var(--radius-md, 8px);
+  -webkit-tap-highlight-color: transparent;
+}
+.twp-pwd-toggle:hover {
+  opacity: 1;
+  color: var(--ink, #2e2c25);
+}
+.twp-pwd-toggle:active {
+  transform: scale(0.92);
+}
+.twp-pwd-toggle:focus-visible {
+  opacity: 1;
+  color: var(--ink, #2e2c25);
+  outline: 2px solid var(--yamabuki, #f8b500);
+  outline-offset: -2px;
+}
+.twp-pwd-toggle svg {
+  display: block;
+  pointer-events: none;
+}
