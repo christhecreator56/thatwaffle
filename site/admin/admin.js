@@ -1272,8 +1272,9 @@
         hSel.appendChild(opt);
       }
     }
-    if (mSel && !mSel.options.length) {
-      for (var m = 0; m < 60; m += 5) {
+    if (mSel && (!mSel.options.length || mSel.options.length < 60)) {
+      mSel.innerHTML = '';
+      for (var m = 0; m < 60; m++) {
         var opt = document.createElement('option');
         opt.value = pad(m);
         opt.textContent = pad(m);
