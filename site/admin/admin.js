@@ -180,9 +180,13 @@
     });
   }
 
+  var activeDispatches = new Set();
+
   function dispatchMetaBroadcast(broadcastId, offer, subList) {
+    if (broadcastId) activeDispatches.add(broadcastId);
     var targets = (subList && subList.length) ? subList : customers.filter(function (c) { return c.is_subscribed; });
     if (!targets.length) {
+      if (broadcastId) activeDispatches.delete(broadcastId);
       return Promise.reject(new Error('No subscribed customers found in CRM. Add customers first.'));
     }
 
@@ -213,21 +217,52 @@
     });
 
     return chain.then(function () {
+      var finalStatus = sent > 0 ? 'completed' : 'failed';
+      var updatePayload = {
+        status: finalStatus,
+        total_recipients: targets.length,
+        sent_count: sent,
+        failed_count: failed,
+        completed_at: new Date().toISOString()
+      };
+
+      // Immediately update in-memory broadcast object so UI re-renders without stale delay
       if (broadcastId) {
-        db.from('broadcasts').update({
-          status: sent > 0 ? 'completed' : 'failed',
-          total_recipients: targets.length,
-          sent_count: sent,
-          failed_count: failed,
-          completed_at: new Date().toISOString()
-        }).eq('id', broadcastId).then(function () {}).catch(function (e) {
-          console.warn('Broadcast status DB update skipped:', e);
-        });
+        var localB = broadcasts.find(function (x) { return x.id === broadcastId; });
+        if (localB) {
+          localB.status = finalStatus;
+          localB.sent_count = sent;
+          localB.failed_count = failed;
+          localB.total_recipients = targets.length;
+          localB.completed_at = updatePayload.completed_at;
+        }
       }
-      if (sent === 0 && failed > 0) {
-        throw new Error('Delivery failed (' + failed + ' recipient): ' + (lastErrorMsg || 'Please check WhatsApp API connection.'));
+
+      var dbUpdate = broadcastId
+        ? db.from('broadcasts').update(updatePayload).eq('id', broadcastId).then(function (res) {
+            if (res && res.error) console.warn('Broadcast status DB update error:', res.error);
+          }).catch(function (e) {
+            console.warn('Broadcast status DB update skipped:', e);
+          })
+        : Promise.resolve();
+
+      return dbUpdate.then(function () {
+        if (broadcastId) activeDispatches.delete(broadcastId);
+        if (sent === 0 && failed > 0) {
+          throw new Error('Delivery failed (' + failed + ' recipient): ' + (lastErrorMsg || 'Please check WhatsApp API connection.'));
+        }
+        return { success: true, sent: sent, failed: failed, total: targets.length };
+      });
+    }).catch(function (err) {
+      if (broadcastId) activeDispatches.delete(broadcastId);
+      if (broadcastId) {
+        var localB = broadcasts.find(function (x) { return x.id === broadcastId; });
+        if (localB && localB.status === 'processing') {
+          localB.status = 'failed';
+        }
+        db.from('broadcasts').update({ status: 'failed', completed_at: new Date().toISOString() }).eq('id', broadcastId).catch(function () {});
       }
-      return { success: true, sent: sent, failed: failed, total: targets.length };
+      throw err;
     });
   }
 
@@ -1720,6 +1755,27 @@
   function checkDueScheduledBroadcasts() {
     if (!broadcasts || !broadcasts.length) return;
     var nowTime = Date.now();
+
+    // 1. Auto-reconcile any orphan or stuck 'processing' broadcasts (stuck in UI without active network dispatch)
+    var reconciledAny = false;
+    broadcasts.forEach(function (b) {
+      if (b.status === 'processing' && !activeDispatches.has(b.id)) {
+        var schedTime = b.scheduled_at ? new Date(b.scheduled_at).getTime() : 0;
+        var isFuture = !isNaN(schedTime) && schedTime > nowTime;
+        var recovered = (b.sent_count && b.sent_count > 0)
+          ? 'completed'
+          : (isFuture ? 'scheduled' : 'failed');
+        console.warn('[SCHEDULER] Auto-reconciled stuck processing broadcast ' + b.id + ' -> ' + recovered);
+        b.status = recovered;
+        reconciledAny = true;
+        db.from('broadcasts').update({ status: recovered }).eq('id', b.id).catch(function () {});
+      }
+    });
+    if (reconciledAny) {
+      drawOffers();
+    }
+
+    // 2. Find any due scheduled broadcasts
     var dueList = broadcasts.filter(function (b) {
       if (b.status !== 'scheduled' || !b.scheduled_at) return false;
       var schedTime = new Date(b.scheduled_at).getTime();
@@ -1729,7 +1785,11 @@
     if (!dueList.length) return;
 
     dueList.forEach(function (b) {
+      if (activeDispatches.has(b.id)) return; // Already running
       b.status = 'processing';
+      activeDispatches.add(b.id);
+      drawOffers(); // update card badge immediately to show sending
+
       var matchingOffer = offers.find(function (o) { return o.id === b.offer_id; }) || {
         id: b.offer_id,
         name: b.offer_name || 'Special Offer',
@@ -1745,6 +1805,8 @@
       var subList = customers.filter(function (c) { return c.is_subscribed; });
       if (!subList.length) {
         console.warn('[SCHEDULER] No subscribed customers for scheduled broadcast:', b.id);
+        b.status = 'completed';
+        activeDispatches.delete(b.id);
         db.from('broadcasts').update({
           status: 'completed',
           total_recipients: 0,
