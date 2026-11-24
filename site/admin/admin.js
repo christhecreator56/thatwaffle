@@ -824,6 +824,9 @@
       broadcasts = must(results[1]) || [];
       $('countBroadcasts').textContent = broadcasts.length;
       drawOffers();
+      if (typeof checkDueScheduledBroadcasts === 'function') {
+        checkDueScheduledBroadcasts();
+      }
     }).catch(function (e) {
       toast(say(e));
       $('offerList').innerHTML = '<li class="empty">' + say(e) + '</li>';
@@ -1688,61 +1691,63 @@
     });
   }
 
-  /* Instant Test Message */
-  var sendTestBtn = $('sendTestBtn');
-  if (sendTestBtn) {
-    sendTestBtn.addEventListener('click', function () {
-      var testMsg = $('testMsg');
-      if (testMsg) testMsg.textContent = '';
-      if (!validateOfferDates()) {
-        if (testMsg) testMsg.textContent = 'End date cannot be before start date.';
-        $('offerMsg').textContent = 'End date cannot be before start date.';
-        return ($('o-end-trigger') || $('o-end')).focus();
-      }
-      var testPhoneInput = $('testPhone');
-      var rawPhone = testPhoneInput ? testPhoneInput.value.trim().replace(/\D/g, '') : '';
-      if (!/^[0-9]{10}$/.test(rawPhone) && !/^[0-9]{11,15}$/.test(rawPhone)) {
-        if (testMsg) testMsg.textContent = 'Enter a valid 10-digit mobile number.';
-        return testPhoneInput ? testPhoneInput.focus() : null;
-      }
-      var phone = rawPhone.length === 10 ? ('+91' + rawPhone) : ('+' + rawPhone);
-      this.disabled = true;
-      if (testMsg) testMsg.textContent = 'Sending test to ' + phone + '...';
+  /* Autonomous Scheduled Broadcast Monitor */
+  var scheduledMonitorTimer = null;
+  function checkDueScheduledBroadcasts() {
+    if (!broadcasts || !broadcasts.length) return;
+    var nowTime = Date.now();
+    var dueList = broadcasts.filter(function (b) {
+      if (b.status !== 'scheduled' || !b.scheduled_at) return false;
+      var schedTime = new Date(b.scheduled_at).getTime();
+      return !isNaN(schedTime) && schedTime <= nowTime;
+    });
 
-      var payload = {
-        to: phone,
-        offer_name: $('o-name').value.trim() || 'WEEEKEND OFFER',
-        discount: $('o-discount').value.trim() || '10% off',
-        starts_on: $('o-start').value || today(),
-        ends_on: $('o-end').value || today(),
-        terms: $('o-terms').value.trim() || 'Terms apply.',
-        poster_url: posterUploader.hasExisting() ? posterUploader.getUrl() : '',
-        custom_message: $('o-custom-msg') ? $('o-custom-msg').value.trim() : '',
-        is_test: true
+    if (!dueList.length) return;
+
+    dueList.forEach(function (b) {
+      b.status = 'processing';
+      var matchingOffer = offers.find(function (o) { return o.id === b.offer_id; }) || {
+        id: b.offer_id,
+        name: b.offer_name || 'Special Offer',
+        discount: b.discount || 'Special discount',
+        starts_on: b.starts_on || today(),
+        ends_on: b.ends_on || today(),
+        terms: b.terms || 'Terms apply. Dine-in only.',
+        poster_url: b.poster_url || '',
+        custom_message: b.custom_message || ''
       };
 
-      var selectedFile = posterUploader.getFile();
-      var readPoster = selectedFile ? new Promise(function (resolve) {
-        var fr = new FileReader();
-        fr.onload = function () { resolve(fr.result || ''); };
-        fr.onerror = function () { resolve(''); };
-        fr.readAsDataURL(selectedFile);
-      }) : Promise.resolve('');
+      console.log('[SCHEDULER] Auto-dispatching due scheduled broadcast:', b.id, matchingOffer.name);
+      var subList = customers.filter(function (c) { return c.is_subscribed; });
+      if (!subList.length) {
+        console.warn('[SCHEDULER] No subscribed customers for scheduled broadcast:', b.id);
+        db.from('broadcasts').update({
+          status: 'completed',
+          total_recipients: 0,
+          sent_count: 0,
+          failed_count: 0,
+          completed_at: new Date().toISOString()
+        }).eq('id', b.id).then(function () {
+          loadOffers();
+        }).catch(function () {});
+        return;
+      }
 
-      readPoster.then(function (dataUrl) {
-        if (dataUrl) payload.poster_data_url = dataUrl;
-        return sendMetaWhatsApp(payload);
-      }).then(function (res) {
-        if (testMsg) testMsg.textContent = '✅ Test message sent via Meta Cloud API (' + (res.message_id || 'sent') + ')';
-        toast('Test WhatsApp sent to ' + phone);
-      }).catch(function (e) {
-        if (testMsg) testMsg.textContent = '❌ ' + e.message;
-        toast('Test failed: ' + e.message);
-      }).finally(function () {
-        if ($('sendTestBtn')) $('sendTestBtn').disabled = false;
+      db.from('broadcasts').update({ status: 'processing' }).eq('id', b.id).catch(function () {});
+
+      dispatchMetaBroadcast(b.id, matchingOffer, subList).then(function (res) {
+        toast('🚀 Scheduled WhatsApp broadcast for "' + matchingOffer.name + '" was dispatched to ' + (res.sent || 0) + ' customer(s)!');
+        return loadOffers();
+      }).catch(function (err) {
+        console.error('[SCHEDULER] Auto-dispatch failed:', err);
+        return loadOffers();
       });
     });
   }
+
+  // Poll for due scheduled broadcasts every 10 seconds
+  if (scheduledMonitorTimer) clearInterval(scheduledMonitorTimer);
+  scheduledMonitorTimer = setInterval(checkDueScheduledBroadcasts, 10000);
 
   /* Dispatch Broadcast Now */
   function dispatchBroadcastNow(broadcastId, offerOrName) {
@@ -1797,7 +1802,6 @@
     $('o-terms').value = o ? o.terms : '';
     $('o-visible').checked = o ? o.is_visible : true;
     $('offerMsg').textContent = '';
-    if ($('testMsg')) $('testMsg').textContent = '';
 
     if (o && o.poster_url) {
       posterUploader.setExisting(o.poster_url);
@@ -1912,6 +1916,13 @@
             });
             var bRow = {
               offer_id: savedOffer.id,
+              offer_name: name,
+              discount: discount,
+              starts_on: start,
+              ends_on: end,
+              terms: $('o-terms').value.trim() || 'Terms apply. Dine-in only.',
+              poster_url: savedOffer.poster_url || '',
+              custom_message: customMsgVal,
               scheduled_at: scheduledIso,
               status: sendImmediately ? 'processing' : 'scheduled'
             };
@@ -1926,6 +1937,13 @@
                   console.warn('Broadcast save warning, retrying minimal:', br.error);
                   var minimal = {
                     offer_id: row.offer_id,
+                    offer_name: row.offer_name,
+                    discount: row.discount,
+                    starts_on: row.starts_on,
+                    ends_on: row.ends_on,
+                    terms: row.terms,
+                    poster_url: row.poster_url,
+                    custom_message: row.custom_message,
                     scheduled_at: row.scheduled_at,
                     status: row.status
                   };
@@ -1934,8 +1952,17 @@
                     db.from('broadcasts').insert(minimal).select('id');
                   return retry.then(function (r2) {
                     if (r2.error) {
-                      console.warn('Broadcast record skipped:', r2.error);
-                      return { data: [{ id: existingScheduled ? existingScheduled.id : null }] };
+                      var bare = { offer_id: row.offer_id, scheduled_at: row.scheduled_at, status: row.status };
+                      var retryBare = existingScheduled ?
+                        db.from('broadcasts').update(bare).eq('id', existingScheduled.id).select('id') :
+                        db.from('broadcasts').insert(bare).select('id');
+                      return retryBare.then(function (r3) {
+                        if (r3.error) {
+                          console.warn('Broadcast record skipped:', r3.error);
+                          return { data: [{ id: existingScheduled ? existingScheduled.id : null }] };
+                        }
+                        return r3;
+                      });
                     }
                     return r2;
                   });

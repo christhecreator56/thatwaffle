@@ -387,41 +387,19 @@ def send_whatsapp_message(to_phone, offer_data, customer_name="Waffle Lover", is
             { "type": "text", "text": terms_safe }
         ]
 
-        img_param = resolve_image_param() if (wa_token and wa_phone_id) else None
-        if img_param:
-            payload = {
-                "messaging_product": "whatsapp",
-                "recipient_type": "individual",
-                "to": cleaned_phone,
-                "type": "template",
-                "template": {
-                    "name": "twp_offer_poster",
-                    "language": { "code": "en" },
-                    "components": [
-                        {
-                            "type": "header",
-                            "parameters": [
-                                { "type": "image", "image": img_param }
-                            ]
-                        },
-                        { "type": "body", "parameters": body_params }
-                    ]
-                }
+        payload = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": cleaned_phone,
+            "type": "template",
+            "template": {
+                "name": "twp_offer_broadcast",
+                "language": { "code": "en" },
+                "components": [
+                    { "type": "body", "parameters": body_params }
+                ]
             }
-        else:
-            payload = {
-                "messaging_product": "whatsapp",
-                "recipient_type": "individual",
-                "to": cleaned_phone,
-                "type": "template",
-                "template": {
-                    "name": "twp_offer_broadcast",
-                    "language": { "code": "en" },
-                    "components": [
-                        { "type": "body", "parameters": body_params }
-                    ]
-                }
-            }
+        }
 
     if wa_token and wa_phone_id:
         try:
@@ -538,8 +516,20 @@ def execute_broadcast(broadcast_id):
         else:
             if broadcast.get('custom_message') and not offer.get('custom_message'):
                 offer['custom_message'] = broadcast.get('custom_message')
+            if broadcast.get('offer_name') and not offer.get('name'):
+                offer['name'] = broadcast.get('offer_name')
 
         customers = [c for c in ldb.get('customers', []) if c.get('is_subscribed')]
+        if not customers:
+            try:
+                c_url = f"{SUPABASE_URL}/rest/v1/customers?is_subscribed=eq.true&apikey={SUPABASE_KEY}"
+                req = urllib.request.Request(c_url, headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"})
+                with urllib.request.urlopen(req, timeout=8) as resp:
+                    c_list = json.loads(resp.read().decode('utf-8'))
+                    if c_list and isinstance(c_list, list):
+                        customers = c_list
+            except Exception:
+                pass
         sent_count = 0
         failed_count = 0
 
@@ -581,10 +571,40 @@ def execute_broadcast(broadcast_id):
 def background_scheduler():
     while True:
         try:
-            now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()
-            status, due_list = local_db.handle_get('broadcasts', {'status': 'eq.scheduled', 'scheduled_at': f'lte.{now_iso}'})
+            now_utc = datetime.datetime.now(datetime.timezone.utc)
+            now_ts = now_utc.timestamp()
+            now_iso = now_utc.isoformat()
+
+            ldb = local_db.load_db()
+            broadcasts = list(ldb.get('broadcasts', []))
+
+            # Best-effort sync of scheduled broadcasts from Supabase
+            try:
+                sb_url = f"{SUPABASE_URL}/rest/v1/broadcasts?status=eq.scheduled&apikey={SUPABASE_KEY}"
+                sb_req = urllib.request.Request(sb_url, headers={"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"})
+                with urllib.request.urlopen(sb_req, timeout=6) as sb_resp:
+                    sb_b = json.loads(sb_resp.read().decode('utf-8'))
+                    if sb_b and isinstance(sb_b, list):
+                        for item in sb_b:
+                            if not any(x.get('id') == item.get('id') for x in broadcasts):
+                                broadcasts.append(item)
+            except Exception:
+                pass
+
+            due_list = []
+            for b in broadcasts:
+                if b.get('status') == 'scheduled' and b.get('scheduled_at'):
+                    dt = local_db._parse_iso(b.get('scheduled_at'))
+                    if dt:
+                        if dt.tzinfo is None:
+                            dt = dt.replace(tzinfo=datetime.timezone.utc)
+                        if dt.timestamp() <= now_ts:
+                            due_list.append(b)
+                    elif str(b.get('scheduled_at')) <= now_iso:
+                        due_list.append(b)
+
             for b in due_list:
-                print(f"[SCHEDULER] Firing scheduled broadcast ID: {b['id']}...", flush=True)
+                print(f"[SCHEDULER] Firing scheduled broadcast ID: {b['id']} ({b.get('offer_name', 'Offer')})...", flush=True)
                 execute_broadcast(b['id'])
         except Exception as e:
             print(f"[SCHEDULER ERROR] {e}", flush=True)
@@ -1503,7 +1523,7 @@ class WaffleRequestHandler(http.server.SimpleHTTPRequestHandler):
         </div>
 
         <button type="button" class="btn-submit" id="btnSend">
-          Dispatch Test WhatsApp Message
+          Dispatch WhatsApp Broadcast
         </button>
       </div>
 
@@ -1513,7 +1533,7 @@ class WaffleRequestHandler(http.server.SimpleHTTPRequestHandler):
         <div class="console-term" id="termOutput">
 <span class="log-info">[READY]</span> WhatsApp automation dispatcher initialized.<br>
 <span class="log-info">[ENGINE]</span> Mode: <span id="termModeText">{mode_label}</span> | Delivery: <span id="termDeliveryText">{html_lib.escape(cur_delivery_mode)}</span><br>
-<span class="log-info">[INFO]</span> Save Meta credentials above for live phone delivery, or click "Dispatch Test" for local simulation.<br>
+<span class="log-info">[INFO]</span> Enter recipient phone and click "Dispatch WhatsApp Broadcast" to deliver via Meta Cloud API.<br>
 ---------------------------------------------<br>
         </div>
       </div>

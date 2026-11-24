@@ -57,3 +57,12 @@ begin
   end if;
 end $$;
 
+-- 4. Ensure scheduled broadcast schema has all required campaign fields
+alter table if exists public.broadcasts add column if not exists custom_message text;
+alter table if exists public.broadcasts add column if not exists offer_name text;
+alter table if exists public.broadcasts add column if not exists discount text;
+alter table if exists public.broadcasts add column if not exists starts_on date;
+alter table if exists public.broadcasts add column if not exists ends_on date;
+alter table if exists public.broadcasts add column if not exists terms text;
+alter table if exists public.broadcasts add column if not exists poster_url text;
+

@@ -1189,54 +1189,6 @@ input[type=file]{font:inherit;font-size:15px;max-width:100%}
   color: #075e54;
 }
 
-/* Instant Test Card */
-.wa-test-card {
-  border-color: #128c7e;
-  background: rgba(37,211,102,.07);
-}
-.wa-test__row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  align-items: center;
-  margin-top: 4px;
-  min-width: 0;
-  max-width: 100%;
-}
-.wa-test__row .twp-input {
-  flex: 1 1 140px;
-  min-width: 0;
-  max-width: 100%;
-  min-height: 44px;
-  background: var(--kinari);
-}
-.wa-test__row .twp-input span {
-  padding-left: 12px;
-  font-size: 14px;
-}
-.wa-test__row .twp-input input {
-  width: 100%;
-  min-width: 0;
-  font-size: 14px;
-  min-height: 44px;
-  padding: 0 10px;
-}
-.wa-test__row .twp-btn {
-  flex-shrink: 0;
-  min-height: 44px;
-  font-size: 15px;
-  padding: 0 14px;
-  white-space: nowrap;
-  letter-spacing: .02em;
-}
-#testMsg {
-  min-width: 0;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  line-height: 1.45;
-}
-
 @media (max-width: 880px) {
   .wa-studio {
     grid-template-columns: 1fr;
@@ -1408,7 +1360,7 @@ input[type=file]{font:inherit;font-size:15px;max-width:100%}
     padding: 8px;
   }
 
-  /* Companion Cards & Instant Test Box */
+  /* Companion Cards */
   .wa-info-col {
     width: 100%;
     min-width: 0;
@@ -1422,22 +1374,6 @@ input[type=file]{font:inherit;font-size:15px;max-width:100%}
   }
   .wa-card__title h3 {
     font-size: 18px;
-  }
-  .wa-test__row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-    width: 100%;
-  }
-  .wa-test__row .twp-input {
-    width: 100%;
-    min-width: 0;
-  }
-  .wa-test__row .twp-btn {
-    width: 100%;
-    min-height: 44px;
-    justify-content: center;
-    text-align: center;
   }
   .wa-spec-item {
     flex-direction: column;
