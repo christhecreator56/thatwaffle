@@ -167,6 +167,85 @@
     return u;
   }
 
+  function sanitizeMetaParam(text, maxLength) {
+    if (!text) return '';
+    return String(text)
+      .replace(/[\r\n\t]+/g, ' · ')
+      .replace(/\s{2,}/g, ' ')
+      .trim()
+      .slice(0, maxLength || 1024);
+  }
+
+  function extractMetaTemplateFields(rawMsg, baseOpts) {
+    var opts = {
+      offer_name: baseOpts.offer_name || 'Weekend Special',
+      discount: baseOpts.discount || 'Special discount',
+      validity: baseOpts.validity || 'Limited time',
+      terms: baseOpts.terms || 'Terms apply.'
+    };
+    if (!rawMsg || typeof rawMsg !== 'string') return opts;
+
+    var lines = rawMsg.split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+    var customNotes = [];
+
+    lines.forEach(function (line) {
+      if (line.indexOf('{offer}') !== -1 || line.indexOf('{{2}}') !== -1) return;
+      if (line.indexOf('{discount}') !== -1 || line.indexOf('{{3}}') !== -1) return;
+      if (line.indexOf('{validity}') !== -1 || line.indexOf('{{4}}') !== -1) return;
+      if (line.indexOf('{terms}') !== -1 || line.indexOf('{{5}}') !== -1) return;
+
+      var mOff = line.match(/^(?:🔥\s*\*|Offer:\s*)(.*?)(?:\*|$)/i);
+      if (mOff) {
+        var vOff = mOff[1].replace(/[*_~]/g, '').trim();
+        if (vOff) { opts.offer_name = vOff; return; }
+      }
+
+      var mDisc = line.match(/^(?:🏷️\s*\*OFFER:\*\s*\*|Discount:\s*)(.*?)(?:\*| on your order!|$)/i);
+      if (mDisc) {
+        var vDisc = mDisc[1].replace(/[*_~]/g, '').trim();
+        if (vDisc) { opts.discount = vDisc; return; }
+      }
+
+      var mVal = line.match(/^(?:📅\s*\*Valid:\*\s*|Valid:\s*)(.*?)$/i);
+      if (mVal) {
+        var vVal = mVal[1].replace(/[*_~]/g, '').trim();
+        if (vVal) { opts.validity = vVal; return; }
+      }
+
+      var mTerms = line.match(/^(?:📝\s*\*Terms:\*\s*|Terms:\s*)(.*?)$/i);
+      if (mTerms) {
+        var vTerms = mTerms[1].replace(/[*_~]/g, '').trim();
+        if (vTerms) { opts.terms = vTerms; return; }
+      }
+
+      if (/^\*?That Waffle Place\*?$/i.test(line) ||
+          /^Hey\s+.*Fresh offer from.*$/i.test(line) ||
+          /^Hi\s+.*special treat from.*$/i.test(line) ||
+          /^Show this message at the counter.*$/i.test(line) ||
+          /^Visit us in Teynampet.*$/i.test(line) ||
+          /^_?Reply STOP to unsubscribe_?$/i.test(line)) {
+        return;
+      }
+
+      var clean = line.replace(/\{name\}|\{\{1\}\}/gi, '').trim();
+      if (clean) {
+        customNotes.push(clean);
+      }
+    });
+
+    var finalTerms = opts.terms || 'Terms apply.';
+    if (customNotes.length > 0) {
+      var joinedNotes = customNotes.join(' · ');
+      if (finalTerms && joinedNotes.indexOf(finalTerms) === -1) {
+        finalTerms = finalTerms + ' · ' + joinedNotes;
+      } else {
+        finalTerms = joinedNotes;
+      }
+    }
+    opts.terms = finalTerms;
+    return opts;
+  }
+
   function sendMetaWhatsApp(opts) {
     var rawPhone = (opts.to || '').replace(/\D/g, '');
     if (rawPhone.startsWith('0091') && rawPhone.length === 14) rawPhone = rawPhone.slice(4);
@@ -178,12 +257,27 @@
       return Promise.reject(new Error('Invalid mobile phone number.'));
     }
 
-    var custName = (opts.customer_name || '').trim() || 'Valued Customer';
-    var offerName = (opts.offer_name || '').trim() || 'Weekend Special';
-    var disc = (opts.discount || '').trim() || 'Special discount';
-    var validity = opts.validity || ((opts.starts_on && opts.ends_on) ? (day(opts.starts_on) + ' to ' + day(opts.ends_on)) : 'Limited time');
-    validity = (validity || '').trim() || 'Limited time';
-    var tms = (opts.terms || '').trim() || 'Terms apply.';
+    var rawCustom = (opts.custom_message || '').trim();
+    if (!rawCustom && typeof $ === 'function') {
+      var customArea = $('o-custom-msg');
+      if (customArea && customArea.value) rawCustom = customArea.value.trim();
+    }
+
+    var baseValidity = opts.validity || ((opts.starts_on && opts.ends_on) ? (day(opts.starts_on) + ' to ' + day(opts.ends_on)) : 'Limited time');
+    baseValidity = (baseValidity || '').trim() || 'Limited time';
+
+    var parsed = extractMetaTemplateFields(rawCustom, {
+      offer_name: opts.offer_name,
+      discount: opts.discount,
+      validity: baseValidity,
+      terms: opts.terms
+    });
+
+    var custName = sanitizeMetaParam(opts.customer_name || 'Valued Customer', 60);
+    var offerName = sanitizeMetaParam(parsed.offer_name || 'Weekend Special', 80);
+    var disc = sanitizeMetaParam(parsed.discount || 'Special discount', 60);
+    var validity = sanitizeMetaParam(parsed.validity || 'Limited time', 60);
+    var tms = sanitizeMetaParam(parsed.terms || 'Terms apply.', 1024);
 
     var posterUrl = resolveMediaUrl(opts.poster_url || (opts.offer && opts.offer.poster_url));
     var hasPoster = Boolean(posterUrl && (posterUrl.startsWith('http://') || posterUrl.startsWith('https://')));
@@ -2331,7 +2425,7 @@
         ends_on: activeOffer.ends_on,
         terms: activeOffer.terms || 'Terms apply.',
         poster_url: activeOffer.poster_url || '',
-        custom_message: offerText
+        custom_message: activeOffer.custom_message || (editingOffer && editingOffer.custom_message) || ($('o-custom-msg') ? $('o-custom-msg').value : '') || offerText
       }).then(function (res) {
         toast('✅ Offer delivered to ' + c.name + ' via WhatsApp Cloud API!');
       }).catch(function (e) {

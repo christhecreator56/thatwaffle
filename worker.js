@@ -20,6 +20,85 @@ function corsHeaders(request) {
   };
 }
 
+function sanitizeMetaParam(text, maxLength = 1024) {
+  if (!text) return '';
+  return String(text)
+    .replace(/[\r\n\t]+/g, ' · ')
+    .replace(/\s{2,}/g, ' ')
+    .trim()
+    .slice(0, maxLength);
+}
+
+function extractMetaTemplateFields(rawMsg, baseOpts) {
+  const opts = {
+    offer_name: baseOpts.offer_name || 'Weekend Special',
+    discount: baseOpts.discount || 'Special discount',
+    validity: baseOpts.validity || 'Limited time',
+    terms: baseOpts.terms || 'Terms apply.'
+  };
+  if (!rawMsg || typeof rawMsg !== 'string') return opts;
+
+  const lines = rawMsg.split('\n').map(l => l.trim()).filter(Boolean);
+  const customNotes = [];
+
+  for (const line of lines) {
+    if (line.includes('{offer}') || line.includes('{{2}}')) continue;
+    if (line.includes('{discount}') || line.includes('{{3}}')) continue;
+    if (line.includes('{validity}') || line.includes('{{4}}')) continue;
+    if (line.includes('{terms}') || line.includes('{{5}}')) continue;
+
+    const mOff = line.match(/^(?:🔥\s*\*|Offer:\s*)(.*?)(?:\*|$)/i);
+    if (mOff) {
+      const vOff = mOff[1].replace(/[*_~]/g, '').trim();
+      if (vOff) { opts.offer_name = vOff; continue; }
+    }
+
+    const mDisc = line.match(/^(?:🏷️\s*\*OFFER:\*\s*\*|Discount:\s*)(.*?)(?:\*| on your order!|$)/i);
+    if (mDisc) {
+      const vDisc = mDisc[1].replace(/[*_~]/g, '').trim();
+      if (vDisc) { opts.discount = vDisc; continue; }
+    }
+
+    const mVal = line.match(/^(?:📅\s*\*Valid:\*\s*|Valid:\s*)(.*?)$/i);
+    if (mVal) {
+      const vVal = mVal[1].replace(/[*_~]/g, '').trim();
+      if (vVal) { opts.validity = vVal; continue; }
+    }
+
+    const mTerms = line.match(/^(?:📝\s*\*Terms:\*\s*|Terms:\s*)(.*?)$/i);
+    if (mTerms) {
+      const vTerms = mTerms[1].replace(/[*_~]/g, '').trim();
+      if (vTerms) { opts.terms = vTerms; continue; }
+    }
+
+    if (/^\*?That Waffle Place\*?$/i.test(line) ||
+        /^Hey\s+.*Fresh offer from.*$/i.test(line) ||
+        /^Hi\s+.*special treat from.*$/i.test(line) ||
+        /^Show this message at the counter.*$/i.test(line) ||
+        /^Visit us in Teynampet.*$/i.test(line) ||
+        /^_?Reply STOP to unsubscribe_?$/i.test(line)) {
+      continue;
+    }
+
+    const clean = line.replace(/\{name\}|\{\{1\}\}/gi, '').trim();
+    if (clean) {
+      customNotes.push(clean);
+    }
+  }
+
+  let finalTerms = opts.terms || 'Terms apply.';
+  if (customNotes.length > 0) {
+    const joinedNotes = customNotes.join(' · ');
+    if (finalTerms && !joinedNotes.includes(finalTerms)) {
+      finalTerms = `${finalTerms} · ${joinedNotes}`;
+    } else {
+      finalTerms = joinedNotes;
+    }
+  }
+  opts.terms = finalTerms;
+  return opts;
+}
+
 async function handleSendWhatsApp(request, env) {
   try {
     const data = await request.json();
@@ -39,11 +118,19 @@ async function handleSendWhatsApp(request, env) {
       });
     }
 
-    const custName = (data.customer_name || '').trim() || 'Valued Customer';
-    const offerName = (data.offer_name || '').trim() || 'Weekend Special';
-    const disc = (data.discount || '').trim() || 'Special discount';
-    const validity = (data.starts_on && data.ends_on) ? `${data.starts_on} to ${data.ends_on}` : ((data.validity || '').trim() || 'Limited time');
-    const tms = (data.terms || '').trim() || 'Terms apply.';
+    const baseValidity = (data.starts_on && data.ends_on) ? `${data.starts_on} to ${data.ends_on}` : ((data.validity || '').trim() || 'Limited time');
+    const parsed = extractMetaTemplateFields(data.custom_message, {
+      offer_name: data.offer_name,
+      discount: data.discount,
+      validity: baseValidity,
+      terms: data.terms
+    });
+
+    const custName = sanitizeMetaParam(data.customer_name || 'Valued Customer', 60);
+    const offerName = sanitizeMetaParam(parsed.offer_name || 'Weekend Special', 80);
+    const disc = sanitizeMetaParam(parsed.discount || 'Special discount', 60);
+    const validity = sanitizeMetaParam(parsed.validity || 'Limited time', 60);
+    const tms = sanitizeMetaParam(parsed.terms || 'Terms apply.', 1024);
 
     const hasPoster = Boolean(data.poster_url && typeof data.poster_url === 'string' && (data.poster_url.startsWith('http://') || data.poster_url.startsWith('https://')));
 
@@ -232,11 +319,19 @@ async function handleDispatchBroadcast(request, env) {
         continue;
       }
 
-      const custName = (c.name || '').trim() || 'Valued Customer';
-      const offerName = (offer.name || '').trim() || 'Weekend Special';
-      const disc = (offer.discount || '').trim() || 'Special discount';
-      const validity = (offer.starts_on && offer.ends_on) ? `${offer.starts_on} to ${offer.ends_on}` : 'Limited time';
-      const tms = (offer.terms || '').trim() || 'Terms apply.';
+      const baseValidity = (offer.starts_on && offer.ends_on) ? `${offer.starts_on} to ${offer.ends_on}` : 'Limited time';
+      const parsed = extractMetaTemplateFields(customMsg, {
+        offer_name: offer.name,
+        discount: offer.discount,
+        validity: baseValidity,
+        terms: offer.terms
+      });
+
+      const custName = sanitizeMetaParam(c.name || 'Valued Customer', 60);
+      const offerName = sanitizeMetaParam(parsed.offer_name || 'Weekend Special', 80);
+      const disc = sanitizeMetaParam(parsed.discount || 'Special discount', 60);
+      const validity = sanitizeMetaParam(parsed.validity || 'Limited time', 60);
+      const tms = sanitizeMetaParam(parsed.terms || 'Terms apply.', 1024);
 
       const poster = (offer && offer.poster_url) || (broadcast && broadcast.poster_url);
       const hasPoster = Boolean(poster && typeof poster === 'string' && (poster.startsWith('http://') || poster.startsWith('https://')));
