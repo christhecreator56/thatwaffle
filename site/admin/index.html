@@ -47,7 +47,7 @@
   <main class="page">
     <section id="tab-offers">
       <div class="head"><h1>offers</h1><button type="button" class="twp-btn" id="newOffer">Add offer</button></div>
-      <form class="twp-form editor" id="offerForm" hidden>
+      <form class="twp-form editor" id="offerForm" hidden novalidate>
         <h2 id="offerTitle">Add offer</h2>
         <div class="twp-field"><label for="o-name">Offer name</label><div class="twp-input"><input id="o-name" required maxlength="80"></div></div>
         <div class="twp-field"><label for="o-discount">Discount</label><div class="twp-input"><input id="o-discount" required maxlength="120" placeholder="Second wedge at half price"></div></div>
@@ -75,7 +75,7 @@
                 <polyline points="6 9 12 15 18 9"/>
               </svg>
             </button>
-            <input id="o-start" type="hidden" required>
+            <input id="o-start" type="hidden">
           </div>
 
           <div class="twp-field date-field-wrap">
@@ -102,7 +102,7 @@
                 <polyline points="6 9 12 15 18 9"/>
               </svg>
             </button>
-            <input id="o-end" type="hidden" required>
+            <input id="o-end" type="hidden">
           </div>
         </div>
 
@@ -460,7 +460,7 @@
 
         <p class="twp-err" id="offerMsg" role="alert"></p>
         <div class="row" id="offerActions">
-          <button class="twp-btn" type="submit" id="saveOfferBtn">Save offer</button>
+          <button class="twp-btn" type="button" id="saveOfferBtn">Save offer</button>
           <button class="twp-btn twp-btn--wa" type="button" id="saveAndSendNowBtn" hidden>
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4Z"/></svg>
             Send Broadcast Now

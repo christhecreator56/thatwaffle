@@ -1924,40 +1924,46 @@
 
   function performSaveOffer(sendImmediately) {
     var msg = $('offerMsg');
-    var start = $('o-start').value;
-    var end = $('o-end').value;
-    msg.textContent = '';
+    var start = $('o-start').value || today();
+    var end = $('o-end').value || start;
+    if (msg) msg.textContent = '';
 
     if (!validateOfferDates()) {
-      msg.textContent = 'End date cannot be before start date.';
+      if (msg) msg.textContent = 'End date cannot be before start date.';
       return ($('o-end-trigger') || $('o-end')).focus();
     }
 
     var name = $('o-name').value.trim();
     if (!name) {
-      msg.textContent = 'Please enter an offer name.';
+      if (msg) msg.textContent = 'Please enter an offer name.';
       return $('o-name').focus();
     }
 
     var discount = $('o-discount').value.trim();
     if (!discount) {
-      msg.textContent = 'Please enter a discount.';
+      if (msg) msg.textContent = 'Please enter a discount.';
       return $('o-discount').focus();
     }
 
-    var doBroadcast = $('o-broadcast').checked;
-    var btime = $('o-btime').value;
+    var doBroadcast = $('o-broadcast') && $('o-broadcast').checked;
+    var btime = $('o-btime') ? $('o-btime').value : '';
 
-    if ((doBroadcast || sendImmediately) && !sendImmediately && !btime) {
-      msg.textContent = 'Please choose a send date and time for the WhatsApp broadcast.';
-      openDtPicker();
-      var trg = $('o-btime-trigger');
-      if (trg) trg.focus();
-      return;
+    // If broadcasting is enabled but date/time was not explicitly chosen, default to +15 minutes
+    if (doBroadcast && !sendImmediately && !btime) {
+      var d = new Date();
+      d.setMinutes(d.getMinutes() + 15);
+      btime = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+      updateBtimeUI(btime);
     }
 
-    var subCount = customers.filter(function (c) { return c.is_subscribed; }).length;
+    var subList = customers.filter(function (c) { return c.is_subscribed; });
+    var subCount = subList.length;
     var audienceStr = subCount + ' subscribed customer' + (subCount === 1 ? '' : 's');
+
+    if (sendImmediately && subCount === 0) {
+      toast('⚠️ No subscribed customers found in CRM. Add customers first!');
+      return;
+    }
 
     var executeSave = function () {
       var saveBtn = $('saveOfferBtn');
@@ -1980,8 +1986,8 @@
           discount: discount,
           starts_on: start,
           ends_on: end,
-          terms: $('o-terms').value.trim() || 'Terms apply. Dine-in only.',
-          is_visible: $('o-visible').checked
+          terms: ($('o-terms') ? $('o-terms').value.trim() : '') || 'Terms apply. Dine-in only.',
+          is_visible: $('o-visible') ? $('o-visible').checked : true
         };
         if (url) {
           row.poster_url = url;
@@ -1994,9 +2000,25 @@
           db.from('offers').insert(row).select();
 
         return p.then(function (r) {
-          var savedOffer = must(r)[0];
+          var rData = (r && r.data) ? r.data : (Array.isArray(r) ? r : []);
+          var savedOffer = (rData && rData[0]) || editingOffer || {
+            id: (editingOffer && editingOffer.id) || ('off_' + Date.now()),
+            name: name,
+            discount: discount,
+            starts_on: start,
+            ends_on: end
+          };
+          if (!savedOffer.id) savedOffer.id = (editingOffer && editingOffer.id) || ('off_' + Date.now());
+          savedOffer.name = name;
+          savedOffer.discount = discount;
+          savedOffer.starts_on = start;
+          savedOffer.ends_on = end;
+          savedOffer.terms = row.terms;
+          savedOffer.custom_message = customMsgVal;
+          if (row.poster_url) savedOffer.poster_url = row.poster_url;
+
           if (doBroadcast || sendImmediately) {
-            var scheduledIso = sendImmediately ? new Date().toISOString() : new Date(btime).toISOString();
+            var scheduledIso = sendImmediately ? new Date().toISOString() : (btime ? new Date(btime).toISOString() : new Date().toISOString());
             var existingScheduled = broadcasts.find(function (b) {
               return b.offer_id === savedOffer.id && (b.status === 'scheduled' || b.status === 'processing');
             });
@@ -2006,47 +2028,43 @@
               discount: discount,
               starts_on: start,
               ends_on: end,
-              terms: $('o-terms').value.trim() || 'Terms apply. Dine-in only.',
+              terms: row.terms,
               poster_url: savedOffer.poster_url || '',
               custom_message: customMsgVal,
               scheduled_at: scheduledIso,
               status: sendImmediately ? 'processing' : 'scheduled'
             };
 
-            function saveBroadcastWithFallback(row) {
+            function saveBroadcastWithFallback(bData) {
               var req = existingScheduled ?
-                db.from('broadcasts').update(row).eq('id', existingScheduled.id).select('id') :
-                db.from('broadcasts').insert(row).select('id');
+                db.from('broadcasts').update(bData).eq('id', existingScheduled.id).select('id') :
+                db.from('broadcasts').insert(bData).select('id');
 
               return req.then(function (br) {
-                if (br.error) {
+                if (br && br.error) {
                   console.warn('Broadcast save warning, retrying minimal:', br.error);
                   var minimal = {
-                    offer_id: row.offer_id,
-                    offer_name: row.offer_name,
-                    discount: row.discount,
-                    starts_on: row.starts_on,
-                    ends_on: row.ends_on,
-                    terms: row.terms,
-                    poster_url: row.poster_url,
-                    custom_message: row.custom_message,
-                    scheduled_at: row.scheduled_at,
-                    status: row.status
+                    offer_id: bData.offer_id,
+                    offer_name: bData.offer_name,
+                    discount: bData.discount,
+                    starts_on: bData.starts_on,
+                    ends_on: bData.ends_on,
+                    terms: bData.terms,
+                    poster_url: bData.poster_url,
+                    custom_message: bData.custom_message,
+                    scheduled_at: bData.scheduled_at,
+                    status: bData.status
                   };
                   var retry = existingScheduled ?
                     db.from('broadcasts').update(minimal).eq('id', existingScheduled.id).select('id') :
                     db.from('broadcasts').insert(minimal).select('id');
                   return retry.then(function (r2) {
-                    if (r2.error) {
-                      var bare = { offer_id: row.offer_id, scheduled_at: row.scheduled_at, status: row.status };
+                    if (r2 && r2.error) {
+                      var bare = { offer_id: bData.offer_id, scheduled_at: bData.scheduled_at, status: bData.status };
                       var retryBare = existingScheduled ?
                         db.from('broadcasts').update(bare).eq('id', existingScheduled.id).select('id') :
                         db.from('broadcasts').insert(bare).select('id');
                       return retryBare.then(function (r3) {
-                        if (r3.error) {
-                          console.warn('Broadcast record skipped:', r3.error);
-                          return { data: [{ id: existingScheduled ? existingScheduled.id : null }] };
-                        }
                         return r3;
                       });
                     }
@@ -2067,8 +2085,6 @@
               var broadcastId = savedB ? savedB.id : (existingScheduled ? existingScheduled.id : null);
               if (sendImmediately) {
                 if (sendNowBtn) sendNowBtn.textContent = 'Dispatching WhatsApp...';
-                var subList = customers.filter(function (c) { return c.is_subscribed; });
-                savedOffer.custom_message = customMsgVal;
                 return dispatchMetaBroadcast(broadcastId, savedOffer, subList).then(function (res) {
                   return { sendImmediately: true, sent: res.sent, failed: res.failed, total: res.total };
                 });
@@ -2087,15 +2103,18 @@
       }).then(function (outcome) {
         $('offerForm').hidden = true;
         if (outcome && outcome.sendImmediately) {
-          toast('Offer saved & WhatsApp broadcast dispatched (' + (outcome.sent || 0) + ' sent' + (outcome.failed ? ', ' + outcome.failed + ' failed' : '') + ')');
+          toast('🚀 Offer saved & WhatsApp broadcast dispatched (' + (outcome.sent || 0) + ' sent' + (outcome.failed ? ', ' + outcome.failed + ' failed' : '') + ')');
         } else if (doBroadcast) {
-          toast('Offer saved & WhatsApp broadcast scheduled!');
+          toast('📅 Offer saved & WhatsApp broadcast scheduled!');
         } else {
-          toast('Offer saved');
+          toast('Offer saved successfully');
         }
         return loadOffers();
       }).catch(function (e) {
-        msg.textContent = say(e);
+        console.error('Save offer error:', e);
+        var errStr = say(e);
+        toast('Error: ' + errStr);
+        if (msg) msg.textContent = errStr;
       }).finally(function () {
         hideActionLoader();
         if (saveBtn) setButtonLoading(saveBtn, false);
@@ -2115,10 +2134,9 @@
       });
     } else if (doBroadcast) {
       var timeStr = btime ? formatDateTime(new Date(btime).toISOString()) : 'the scheduled time';
-      var note0 = subCount === 0 ? '<br><br><span style="color:#e65100;font-weight:700;">⚠️ Notice: You currently have 0 subscribed customers in your database. Add customer phone numbers in the "Customers" tab first so the broadcast has recipients to send to!</span>' : '';
       askConfirm({
         title: 'Schedule WhatsApp Broadcast?',
-        message: 'This will save the offer "' + name + '" and schedule the WhatsApp broadcast to ' + audienceStr + ' for ' + timeStr + '.' + note0 + '<br><br>Proceed?',
+        message: 'This will save the offer "' + name + '" and schedule the WhatsApp broadcast to ' + audienceStr + ' for ' + timeStr + '. Proceed?',
         confirmText: 'Schedule Broadcast',
         tone: subCount === 0 ? 'danger' : 'wa'
       }).then(function (ok) {
@@ -2127,6 +2145,14 @@
     } else {
       executeSave();
     }
+  }
+
+  var saveOfferBtn = $('saveOfferBtn');
+  if (saveOfferBtn) {
+    saveOfferBtn.addEventListener('click', function (ev) {
+      ev.preventDefault();
+      performSaveOffer(false);
+    });
   }
 
   $('offerForm').addEventListener('submit', function (ev) {
