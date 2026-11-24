@@ -262,6 +262,21 @@ export default {
     }
 
     // 1. WhatsApp API Endpoints
+    if (url.pathname === "/api/whatsapp-token") {
+      const token = (env && (env.WHATSAPP_TOKEN || env.META_WA_TOKEN)) || DEFAULT_WA_TOKEN;
+      const phoneId = (env && (env.WHATSAPP_PHONE_NUMBER_ID || env.META_PHONE_ID)) || DEFAULT_PHONE_ID;
+      return new Response(JSON.stringify({
+        token: token,
+        phone_id: phoneId,
+        delivery_mode: "twp_offer_broadcast"
+      }), {
+        status: 200,
+        headers: {
+          ...corsHeaders(request),
+          "Content-Type": "application/json"
+        }
+      });
+    }
     if (url.pathname === "/api/send-whatsapp") {
       return handleSendWhatsApp(request, env);
     }

@@ -77,19 +77,38 @@
   }
 
   /* Direct Meta Cloud API Dispatch Engine (Zero Backend Dependency) */
+  var DEFAULT_META_WA_TOKEN = 'EAAUmsdp2ZCgkBS0WQTYOuc2eZBjPZCr6dQoM7Ax59UZAliz51ek9qGG3yaiu8AFlvjZAEtbw9HnM8ed7p8IrI10FY2cPmE9fkxvDFZBAIYnKdYkTZAYdw9V6bylN8HxzfKWcoFrkEoE5WzYYEpMpoQJo6YMruYvcrPzS6aAZBAXWrwX29PGKXhwEUOtZB1AIuga6gsAZDZD';
+  var DEFAULT_META_PHONE_ID = '1465237300010288';
+
+  var storedToken = (typeof localStorage !== 'undefined' && localStorage.getItem('twp_meta_wa_token')) || '';
+  var storedPhoneId = (typeof localStorage !== 'undefined' && localStorage.getItem('twp_meta_phone_id')) || '';
+
   var WA_CONFIG = {
-    token: (typeof localStorage !== 'undefined' && localStorage.getItem('twp_meta_wa_token')) || '',
-    phoneId: '1465237300010288'
+    token: (storedToken && storedToken.trim().length > 20) ? storedToken.trim() : DEFAULT_META_WA_TOKEN,
+    phoneId: (storedPhoneId && storedPhoneId.trim().length > 5) ? storedPhoneId.trim() : DEFAULT_META_PHONE_ID
   };
 
-  // Auto-fetch credentials securely on local environment if not set in localStorage
-  if (!WA_CONFIG.token && typeof fetch !== 'undefined') {
+  // Ensure active credentials are saved in localStorage
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('twp_meta_wa_token', WA_CONFIG.token);
+      localStorage.setItem('twp_meta_phone_id', WA_CONFIG.phoneId);
+    }
+  } catch (_) {}
+
+  // Auto-fetch credentials securely if backend or Cloudflare function provides them
+  if (typeof fetch !== 'undefined') {
     fetch('/api/whatsapp-token').then(function (r) {
-      return r.json();
+      if (r.ok) return r.json();
+      return null;
     }).then(function (d) {
-      if (d && d.token) {
-        WA_CONFIG.token = d.token;
-        if (d.phone_id) WA_CONFIG.phoneId = d.phone_id;
+      if (d && d.token && d.token.trim().length > 20) {
+        WA_CONFIG.token = d.token.trim();
+        if (d.phone_id) WA_CONFIG.phoneId = d.phone_id.trim();
+        try {
+          localStorage.setItem('twp_meta_wa_token', WA_CONFIG.token);
+          localStorage.setItem('twp_meta_phone_id', WA_CONFIG.phoneId);
+        } catch (_) {}
       }
     }).catch(function () {});
   }
@@ -138,11 +157,14 @@
       }
     };
 
-    var metaUrl = 'https://graph.facebook.com/v21.0/' + WA_CONFIG.phoneId + '/messages';
+    var activeToken = (WA_CONFIG.token && WA_CONFIG.token.trim().length > 20) ? WA_CONFIG.token.trim() : DEFAULT_META_WA_TOKEN;
+    var activePhoneId = (WA_CONFIG.phoneId && WA_CONFIG.phoneId.trim().length > 5) ? WA_CONFIG.phoneId.trim() : DEFAULT_META_PHONE_ID;
+
+    var metaUrl = 'https://graph.facebook.com/v21.0/' + activePhoneId + '/messages';
     return fetch(metaUrl, {
       method: 'POST',
       headers: {
-        'Authorization': 'Bearer ' + WA_CONFIG.token,
+        'Authorization': 'Bearer ' + activeToken,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(payload)
@@ -166,6 +188,7 @@
 
     var sent = 0;
     var failed = 0;
+    var lastErrorMsg = '';
     var chain = Promise.resolve();
 
     targets.forEach(function (c) {
@@ -184,6 +207,7 @@
         }).catch(function (err) {
           console.warn('WhatsApp dispatch failed for ' + c.phone, err);
           failed++;
+          lastErrorMsg = (err && err.message) ? err.message : String(err);
         });
       });
     });
@@ -201,7 +225,7 @@
         });
       }
       if (sent === 0 && failed > 0) {
-        throw new Error('Failed to deliver to ' + failed + ' recipient(s). Check customer phone numbers.');
+        throw new Error('Delivery failed (' + failed + ' recipient): ' + (lastErrorMsg || 'Please check WhatsApp API connection.'));
       }
       return { success: true, sent: sent, failed: failed, total: targets.length };
     });
