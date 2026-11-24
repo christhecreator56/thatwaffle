@@ -170,7 +170,7 @@
   function sanitizeMetaParam(text, maxLength) {
     if (!text) return '';
     return String(text)
-      .replace(/[\r\n\t]+/g, ' · ')
+      .replace(/[\r\n\t]+/g, ' • ')
       .replace(/\s{2,}/g, ' ')
       .trim()
       .slice(0, maxLength || 1024);
@@ -178,10 +178,10 @@
 
   function extractMetaTemplateFields(rawMsg, baseOpts) {
     var opts = {
-      offer_name: baseOpts.offer_name || 'Weekend Special',
+      offer_name: baseOpts.offer_name || 'Gourmet Belgian Waffle Special',
       discount: baseOpts.discount || 'Special discount',
       validity: baseOpts.validity || 'Limited time',
-      terms: baseOpts.terms || 'Terms apply.'
+      terms: baseOpts.terms || 'Valid for dine-in & takeaway • Freshly baked to order'
     };
     if (!rawMsg || typeof rawMsg !== 'string') return opts;
 
@@ -233,11 +233,11 @@
       }
     });
 
-    var finalTerms = opts.terms || 'Terms apply.';
+    var finalTerms = opts.terms || 'Valid for dine-in & takeaway • Freshly baked to order';
     if (customNotes.length > 0) {
-      var joinedNotes = customNotes.join(' · ');
+      var joinedNotes = customNotes.join(' • ');
       if (finalTerms && joinedNotes.indexOf(finalTerms) === -1) {
-        finalTerms = finalTerms + ' · ' + joinedNotes;
+        finalTerms = finalTerms + ' • ' + joinedNotes;
       } else {
         finalTerms = joinedNotes;
       }

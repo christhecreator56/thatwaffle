@@ -23,7 +23,7 @@ function corsHeaders(request) {
 function sanitizeMetaParam(text, maxLength = 1024) {
   if (!text) return '';
   return String(text)
-    .replace(/[\r\n\t]+/g, ' · ')
+    .replace(/[\r\n\t]+/g, ' • ')
     .replace(/\s{2,}/g, ' ')
     .trim()
     .slice(0, maxLength);
@@ -31,10 +31,10 @@ function sanitizeMetaParam(text, maxLength = 1024) {
 
 function extractMetaTemplateFields(rawMsg, baseOpts) {
   const opts = {
-    offer_name: baseOpts.offer_name || 'Weekend Special',
+    offer_name: baseOpts.offer_name || 'Gourmet Belgian Waffle Special',
     discount: baseOpts.discount || 'Special discount',
     validity: baseOpts.validity || 'Limited time',
-    terms: baseOpts.terms || 'Terms apply.'
+    terms: baseOpts.terms || 'Valid for dine-in & takeaway • Freshly baked to order'
   };
   if (!rawMsg || typeof rawMsg !== 'string') return opts;
 
