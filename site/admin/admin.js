@@ -119,21 +119,20 @@
   var DEFAULT_META_WA_TOKEN = 'EAAUmsdp2ZCgkBS0WQTYOuc2eZBjPZCr6dQoM7Ax59UZAliz51ek9qGG3yaiu8AFlvjZAEtbw9HnM8ed7p8IrI10FY2cPmE9fkxvDFZBAIYnKdYkTZAYdw9V6bylN8HxzfKWcoFrkEoE5WzYYEpMpoQJo6YMruYvcrPzS6aAZBAXWrwX29PGKXhwEUOtZB1AIuga6gsAZDZD';
   var DEFAULT_META_PHONE_ID = '1465237300010288';
 
-  var storedToken = (typeof localStorage !== 'undefined' && localStorage.getItem('twp_meta_wa_token')) || '';
-  var storedPhoneId = (typeof localStorage !== 'undefined' && localStorage.getItem('twp_meta_phone_id')) || '';
-
-  var WA_CONFIG = {
-    token: (storedToken && storedToken.trim().length > 20) ? storedToken.trim() : DEFAULT_META_WA_TOKEN,
-    phoneId: (storedPhoneId && storedPhoneId.trim().length > 5) ? storedPhoneId.trim() : DEFAULT_META_PHONE_ID
-  };
-
-  // Ensure active credentials are saved in localStorage
+  // Force clean stale tokens from previous sessions to ensure fresh permanent token is used
   try {
     if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('twp_meta_wa_token', WA_CONFIG.token);
-      localStorage.setItem('twp_meta_phone_id', WA_CONFIG.phoneId);
+      localStorage.removeItem('twp_meta_wa_token');
+      localStorage.removeItem('twp_meta_phone_id');
+      localStorage.setItem('twp_meta_wa_token', DEFAULT_META_WA_TOKEN);
+      localStorage.setItem('twp_meta_phone_id', DEFAULT_META_PHONE_ID);
     }
   } catch (_) {}
+
+  var WA_CONFIG = {
+    token: DEFAULT_META_WA_TOKEN,
+    phoneId: DEFAULT_META_PHONE_ID
+  };
 
   // Auto-fetch credentials securely if backend or Cloudflare function provides them
   if (typeof fetch !== 'undefined') {
@@ -477,7 +476,7 @@
         if (sent === 0 && failed > 0) {
           throw new Error('Delivery failed (' + failed + ' recipient): ' + (lastErrorMsg || 'Please check WhatsApp API connection.'));
         }
-        return { success: true, sent: sent, failed: failed, total: targets.length };
+        return { success: true, sent: sent, failed: failed, total: targets.length, lastError: lastErrorMsg };
       });
     }).catch(function (err) {
       if (broadcastId) activeDispatches.delete(broadcastId);
@@ -1045,46 +1044,57 @@
         broadcastBtn.type = 'button';
         broadcastBtn.title = 'Send this offer via WhatsApp to all subscribed customers';
         broadcastBtn.addEventListener('click', function () {
-          var subList = customers.filter(function (c) { return c.is_subscribed; });
-          var subCount = subList.length;
-          if (subCount === 0) {
-            toast('No subscribed customers found in CRM. Add customers or import a CSV first.');
-            return;
-          }
-          askConfirm({
-            title: 'Broadcast Offer to Customers?',
-            message: 'Send "' + o.name + '" (' + o.discount + ') via WhatsApp to ' + subCount + ' subscribed customer(s) right now?',
-            confirmText: 'Send to ' + subCount + ' Customers',
-            tone: 'wa'
-          }).then(function (ok) {
-            if (!ok) return;
-            showActionLoader('Broadcasting WhatsApp Offer...', 'Delivering "' + o.name + '" to your ' + subCount + ' customer subscribers...');
-            var curB = getOfferBroadcast(o.id);
-            var bId = curB ? curB.id : null;
-            var p = bId 
-              ? Promise.resolve({ id: bId })
-              : db.from('broadcasts').insert({
-                  offer_id: o.id,
-                  status: 'scheduled',
-                  scheduled_at: new Date().toISOString()
-                }).select('id').then(function (res) {
-                  var d = res && res.data;
-                  return (d && d[0]) || {};
-                }).catch(function (dbErr) {
-                  console.warn('DB broadcast insert skipped:', dbErr);
-                  return {};
-                });
+          showActionLoader('Loading customer subscribers...', 'Fetching active subscribers from CRM...');
+          db.from('customers').select('*').eq('is_subscribed', true).then(function (r) {
+            var subList = (r && r.data && r.data.length) ? r.data : customers.filter(function (c) { return c.is_subscribed; });
+            var subCount = subList.length;
+            hideActionLoader();
+            if (subCount === 0) {
+              toast('No subscribed customers found in CRM. Add customers or import a CSV first.');
+              return;
+            }
+            askConfirm({
+              title: 'Broadcast Offer to Customers?',
+              message: 'Send "' + o.name + '" (' + o.discount + ') via WhatsApp to ' + subCount + ' subscribed customer(s) right now?',
+              confirmText: 'Send to ' + subCount + ' Customers',
+              tone: 'wa'
+            }).then(function (ok) {
+              if (!ok) return;
+              showActionLoader('Broadcasting WhatsApp Offer...', 'Delivering "' + o.name + '" to ' + subCount + ' customer subscribers via Meta Cloud API...');
+              var curB = getOfferBroadcast(o.id);
+              var bId = curB ? curB.id : null;
+              var p = bId 
+                ? Promise.resolve({ id: bId })
+                : db.from('broadcasts').insert({
+                    offer_id: o.id,
+                    status: 'scheduled',
+                    scheduled_at: new Date().toISOString()
+                  }).select('id').then(function (res) {
+                    var d = res && res.data;
+                    return (d && d[0]) || {};
+                  }).catch(function (dbErr) {
+                    console.warn('DB broadcast insert skipped:', dbErr);
+                    return {};
+                  });
 
-            p.then(function (createdB) {
-              return dispatchMetaBroadcast((createdB && createdB.id) || bId, o, subList);
-            }).then(function (res) {
-              toast('Offer sent to ' + (res.sent || subCount) + ' customer(s) successfully via WhatsApp Cloud API!');
-              loadOffers();
-            }).catch(function (e) {
-              toast('Broadcast error: ' + e.message);
-            }).finally(function () {
-              hideActionLoader();
+              p.then(function (createdB) {
+                return dispatchMetaBroadcast((createdB && createdB.id) || bId, o, subList);
+              }).then(function (res) {
+                if (res.failed > 0) {
+                  toast('⚠️ Sent to ' + res.sent + ' customer(s), but ' + res.failed + ' failed: ' + (res.lastError || ''));
+                } else {
+                  toast('✅ Offer sent to ' + (res.sent || subCount) + ' customer(s) successfully via WhatsApp Cloud API!');
+                }
+                loadOffers();
+              }).catch(function (e) {
+                toast('❌ Broadcast error: ' + e.message);
+              }).finally(function () {
+                hideActionLoader();
+              });
             });
+          }).catch(function (err) {
+            hideActionLoader();
+            toast('Failed to load customers: ' + say(err));
           });
         });
         extraBtns.push(broadcastBtn);
