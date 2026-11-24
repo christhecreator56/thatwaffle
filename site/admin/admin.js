@@ -2405,14 +2405,143 @@
     };
   }
 
+  function loadXLSX() {
+    if (typeof XLSX !== 'undefined') return Promise.resolve(XLSX);
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+      s.onload = function () {
+        if (typeof XLSX !== 'undefined') resolve(XLSX);
+        else reject(new Error('SheetJS library loaded without global XLSX object.'));
+      };
+      s.onerror = function () {
+        reject(new Error('Could not load Excel reader from CDN.'));
+      };
+      document.head.appendChild(s);
+    });
+  }
+
+  function parseAndImportCsvText(text, fileLabel) {
+    try {
+      var cleanText = (text || '').replace(/^\ufeff/, ''); // Strip UTF-8 BOM
+      var lines = cleanText.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
+      if (!lines.length) {
+        hideActionLoader();
+        return toast('The selected file has no data rows.');
+      }
+
+      // Build set of existing customer phone numbers (Primary Key)
+      var existingPhoneSet = new Set();
+      customers.forEach(function (c) {
+        var norm = normalizePhone(c.phone);
+        if (norm) existingPhoneSet.add(norm);
+      });
+
+      var seenInCsv = new Set();
+      var toInsert = [];
+      var duplicateCount = 0;
+      var skippedCount = 0;
+
+      for (var i = 0; i < lines.length; i++) {
+        var parts = parseCsvLine(lines[i]);
+        if (!parts.length || (parts.length === 1 && !parts[0])) continue;
+
+        var res = extractCustomerRow(parts);
+        if (!res) {
+          skippedCount++;
+          continue;
+        }
+        if (res.isHeader) {
+          continue; // Header row
+        }
+
+        // Check for duplicate number (existing in DB or duplicate inside sheet)
+        if (existingPhoneSet.has(res.norm) || seenInCsv.has(res.norm)) {
+          duplicateCount++;
+          continue; // Do NOT add duplicate numbers, only add new contacts
+        }
+
+        seenInCsv.add(res.norm);
+        toInsert.push({
+          name: res.name,
+          phone: res.phone,
+          is_subscribed: true,
+          source: 'import'
+        });
+      }
+
+      if (!toInsert.length) {
+        hideActionLoader();
+        if (duplicateCount > 0) {
+          return toast('No new customers added: All ' + duplicateCount + ' number(s) in ' + (fileLabel || 'file') + ' already exist in the system.');
+        }
+        return toast('No valid 10-digit mobile numbers found. Click "Format Guide" to view sample.');
+      }
+
+      showActionLoader('Importing customers...', 'Importing ' + toInsert.length + ' new contact' + (toInsert.length === 1 ? '' : 's') + ' into WhatsApp CRM...');
+
+      db.from('customers').insert(toInsert).then(function (r) {
+        must(r);
+        var msg = 'Successfully added ' + toInsert.length + ' new customer' + (toInsert.length === 1 ? '' : 's') + '!';
+        if (duplicateCount > 0) {
+          msg += ' (' + duplicateCount + ' duplicate number' + (duplicateCount === 1 ? '' : 's') + ' skipped)';
+        }
+        if (skippedCount > 0) {
+          msg += ' (' + skippedCount + ' invalid row' + (skippedCount === 1 ? '' : 's') + ' skipped)';
+        }
+        toast(msg);
+        return loadCustomers();
+      }).catch(function (err) {
+        toast('Import failed: ' + say(err));
+      }).finally(function () {
+        hideActionLoader();
+      });
+    } catch (err) {
+      hideActionLoader();
+      console.error('Error processing contact file:', err);
+      toast('Failed to process file: ' + say(err));
+    }
+  }
+
   function processCsvFile(file) {
     if (!file) return;
 
-    if (file.name && file.name.match(/\.xlsx?$|\.xlsm$/i)) {
-      return toast('Please select a .CSV file. If you have an Excel file, save or export it as .CSV first.');
-    }
+    var isExcel = file.name && file.name.match(/\.xlsx?$|\.xlsm$/i);
+    var label = isExcel ? 'Excel' : 'CSV';
+    showActionLoader('Reading contacts...', 'Processing ' + label + ' file: ' + file.name);
 
-    showActionLoader('Reading contacts...', 'Processing CSV file: ' + file.name);
+    if (isExcel) {
+      loadXLSX().then(function (XLSX) {
+        var reader = new FileReader();
+        reader.onerror = function () {
+          hideActionLoader();
+          toast('Could not read the Excel file. Please try again.');
+        };
+        reader.onload = function (e) {
+          try {
+            var data = new Uint8Array(e.target.result);
+            var workbook = XLSX.read(data, { type: 'array' });
+            var firstSheet = workbook.SheetNames[0];
+            if (!firstSheet) {
+              hideActionLoader();
+              return toast('The Excel file contains no worksheets.');
+            }
+            var worksheet = workbook.Sheets[firstSheet];
+            var csvText = XLSX.utils.sheet_to_csv(worksheet);
+            parseAndImportCsvText(csvText, 'Excel spreadsheet');
+          } catch (err) {
+            hideActionLoader();
+            console.error('Excel parse error:', err);
+            toast('Failed to read Excel data: ' + (err.message || err));
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      }).catch(function (err) {
+        hideActionLoader();
+        toast('Could not load Excel reader: ' + err.message);
+      });
+      return;
+    }
 
     var reader = new FileReader();
     reader.onerror = function () {
@@ -2420,85 +2549,7 @@
       toast('Could not read the file. Please check file permissions or try again.');
     };
     reader.onload = function (e) {
-      try {
-        var text = (e.target.result || '').replace(/^\ufeff/, ''); // Strip UTF-8 BOM
-        var lines = text.split(/\r?\n/).map(function (l) { return l.trim(); }).filter(Boolean);
-        if (!lines.length) {
-          hideActionLoader();
-          return toast('The selected file is empty.');
-        }
-
-        // Build set of existing customer phone numbers (Primary Key)
-        var existingPhoneSet = new Set();
-        customers.forEach(function (c) {
-          var norm = normalizePhone(c.phone);
-          if (norm) existingPhoneSet.add(norm);
-        });
-
-        var seenInCsv = new Set();
-        var toInsert = [];
-        var duplicateCount = 0;
-        var skippedCount = 0;
-
-        for (var i = 0; i < lines.length; i++) {
-          var parts = parseCsvLine(lines[i]);
-          if (!parts.length || (parts.length === 1 && !parts[0])) continue;
-
-          var res = extractCustomerRow(parts);
-          if (!res) {
-            skippedCount++;
-            continue;
-          }
-          if (res.isHeader) {
-            continue; // Header row
-          }
-
-          // Check for duplicate number (existing in DB or duplicate inside CSV)
-          if (existingPhoneSet.has(res.norm) || seenInCsv.has(res.norm)) {
-            duplicateCount++;
-            continue; // Do NOT add! Skip duplicate, only add remaining!
-          }
-
-          seenInCsv.add(res.norm);
-          toInsert.push({
-            name: res.name, // Customer names can be identical!
-            phone: res.phone,
-            is_subscribed: true,
-            source: 'import'
-          });
-        }
-
-        if (!toInsert.length) {
-          hideActionLoader();
-          if (duplicateCount > 0) {
-            return toast('No new customers added: All ' + duplicateCount + ' number(s) in CSV already exist in the system.');
-          }
-          return toast('No valid 10-digit mobile numbers found. Click "CSV Format" to view sample.');
-        }
-
-        showActionLoader('Importing customers...', 'Importing ' + toInsert.length + ' new contact' + (toInsert.length === 1 ? '' : 's') + ' into WhatsApp CRM...');
-
-        db.from('customers').insert(toInsert).then(function (r) {
-          must(r);
-          var msg = 'Successfully added ' + toInsert.length + ' new customer' + (toInsert.length === 1 ? '' : 's') + '!';
-          if (duplicateCount > 0) {
-            msg += ' (' + duplicateCount + ' duplicate number' + (duplicateCount === 1 ? '' : 's') + ' skipped)';
-          }
-          if (skippedCount > 0) {
-            msg += ' (' + skippedCount + ' invalid row' + (skippedCount === 1 ? '' : 's') + ' skipped)';
-          }
-          toast(msg);
-          return loadCustomers();
-        }).catch(function (err) {
-          toast('Import failed: ' + say(err));
-        }).finally(function () {
-          hideActionLoader();
-        });
-      } catch (err) {
-        hideActionLoader();
-        console.error('Error processing CSV:', err);
-        toast('Failed to process CSV: ' + say(err));
-      }
+      parseAndImportCsvText(e.target.result, 'CSV file');
     };
     reader.readAsText(file);
   }
