@@ -146,10 +146,44 @@
     validity = (validity || '').trim() || 'Limited time';
     var tms = (opts.terms || '').trim() || 'Terms apply.';
 
-    // Meta WhatsApp Cloud API rule:
-    // Outbound messages outside 24h window (without customer sending 'Hi' first)
-    // MUST use an approved Meta template (twp_offer_broadcast).
-    var payload = {
+    var posterUrl = resolveMediaUrl(opts.poster_url || (opts.offer && opts.offer.poster_url));
+    var hasPoster = Boolean(posterUrl && (posterUrl.startsWith('http://') || posterUrl.startsWith('https://')));
+
+    // Meta WhatsApp Cloud API:
+    // Outbound marketing messages outside the 24-hour window must use an approved template.
+    // When a poster photo is present, use 'twp_offer_poster' (which has an approved IMAGE header).
+    // Otherwise, use 'twp_offer_broadcast'.
+    var primaryPayload = hasPoster ? {
+      messaging_product: 'whatsapp',
+      recipient_type: 'individual',
+      to: rawPhone,
+      type: 'template',
+      template: {
+        name: 'twp_offer_poster',
+        language: { code: 'en' },
+        components: [
+          {
+            type: 'header',
+            parameters: [
+              {
+                type: 'image',
+                image: { link: posterUrl }
+              }
+            ]
+          },
+          {
+            type: 'body',
+            parameters: [
+              { type: 'text', text: custName },
+              { type: 'text', text: offerName },
+              { type: 'text', text: disc },
+              { type: 'text', text: validity },
+              { type: 'text', text: tms }
+            ]
+          }
+        ]
+      }
+    } : {
       messaging_product: 'whatsapp',
       recipient_type: 'individual',
       to: rawPhone,
@@ -176,56 +210,55 @@
     var activePhoneId = (WA_CONFIG.phoneId && WA_CONFIG.phoneId.trim().length > 5) ? WA_CONFIG.phoneId.trim() : DEFAULT_META_PHONE_ID;
 
     var metaUrl = 'https://graph.facebook.com/v21.0/' + activePhoneId + '/messages';
-    return fetch(metaUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Bearer ' + activeToken,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload)
-    }).then(function (r) {
-      return r.json().then(function (data) {
-        if (!r.ok) {
-          var err = (data && data.error && data.error.message) || ('Meta API error (' + r.status + ')');
-          throw new Error(err);
-        }
-        var msgId = (data.messages && data.messages[0] && data.messages[0].id) || 'wamid.sent';
 
-        // Deliver the offer photo/poster if available
-        var posterUrl = resolveMediaUrl(opts.poster_url || (opts.offer && opts.offer.poster_url));
-        if (posterUrl && (posterUrl.startsWith('http://') || posterUrl.startsWith('https://'))) {
-          var imgPayload = {
-            messaging_product: 'whatsapp',
-            recipient_type: 'individual',
-            to: rawPhone,
-            type: 'image',
-            image: {
-              link: posterUrl,
-              caption: '🧇 *' + offerName + '* (' + disc + ') — That Waffle Place'
-            }
-          };
-          return fetch(metaUrl, {
-            method: 'POST',
-            headers: {
-              'Authorization': 'Bearer ' + activeToken,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(imgPayload)
-          }).then(function (imgR) {
-            return imgR.json().then(function (imgData) {
-              var imgMsgId = (imgData && imgData.messages && imgData.messages[0] && imgData.messages[0].id) || msgId;
-              return { success: true, message_id: imgMsgId, mode: 'meta_live_with_photo' };
-            }).catch(function () {
-              return { success: true, message_id: msgId, mode: 'meta_live' };
-            });
-          }).catch(function (imgErr) {
-            console.warn('[WA PHOTO] Image dispatch skipped:', imgErr);
-            return { success: true, message_id: msgId, mode: 'meta_live' };
-          });
-        }
-
-        return { success: true, message_id: msgId, mode: 'meta_live' };
+    function deliver(payload) {
+      return fetch(metaUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer ' + activeToken,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      }).then(function (r) {
+        return r.json().then(function (data) {
+          if (!r.ok) {
+            var err = (data && data.error && data.error.message) || ('Meta API error (' + r.status + ')');
+            throw new Error(err);
+          }
+          var msgId = (data.messages && data.messages[0] && data.messages[0].id) || 'wamid.sent';
+          return { success: true, message_id: msgId, mode: hasPoster ? 'meta_live_poster' : 'meta_live' };
+        });
       });
+    }
+
+    return deliver(primaryPayload).catch(function (primaryErr) {
+      if (hasPoster) {
+        console.warn('[WA POSTER] twp_offer_poster failed, trying twp_offer_broadcast fallback:', primaryErr);
+        var fallbackPayload = {
+          messaging_product: 'whatsapp',
+          recipient_type: 'individual',
+          to: rawPhone,
+          type: 'template',
+          template: {
+            name: 'twp_offer_broadcast',
+            language: { code: 'en' },
+            components: [
+              {
+                type: 'body',
+                parameters: [
+                  { type: 'text', text: custName },
+                  { type: 'text', text: offerName },
+                  { type: 'text', text: disc },
+                  { type: 'text', text: validity },
+                  { type: 'text', text: tms }
+                ]
+              }
+            ]
+          }
+        };
+        return deliver(fallbackPayload);
+      }
+      throw primaryErr;
     });
   }
 

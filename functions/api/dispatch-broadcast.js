@@ -91,14 +91,74 @@ export async function onRequestPost(context) {
       const validity = (offer.starts_on && offer.ends_on) ? `${offer.starts_on} to ${offer.ends_on}` : 'Limited time';
       const tms = (offer.terms || '').trim() || 'Terms apply.';
 
+      const poster = (offer && offer.poster_url) || (broadcast && broadcast.poster_url);
+      const hasPoster = Boolean(poster && typeof poster === 'string' && (poster.startsWith('http://') || poster.startsWith('https://')));
+
+      const payload = hasPoster ? {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: cleaned,
+        type: "template",
+        template: {
+          name: "twp_offer_poster",
+          language: { code: "en" },
+          components: [
+            {
+              type: "header",
+              parameters: [
+                {
+                  type: "image",
+                  image: { link: poster }
+                }
+              ]
+            },
+            {
+              type: "body",
+              parameters: [
+                { type: "text", text: custName },
+                { type: "text", text: offerName },
+                { type: "text", text: disc },
+                { type: "text", text: validity },
+                { type: "text", text: tms }
+              ]
+            }
+          ]
+        }
+      } : {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: cleaned,
+        type: "template",
+        template: {
+          name: "twp_offer_broadcast",
+          language: { code: "en" },
+          components: [
+            {
+              type: "body",
+              parameters: [
+                { type: "text", text: custName },
+                { type: "text", text: offerName },
+                { type: "text", text: disc },
+                { type: "text", text: validity },
+                { type: "text", text: tms }
+              ]
+            }
+          ]
+        }
+      };
+
       try {
-        const metaRes = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
+        let metaRes = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${token}`,
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({
+          body: JSON.stringify(payload)
+        });
+
+        if (!metaRes.ok && hasPoster) {
+          const fallbackPayload = {
             messaging_product: "whatsapp",
             recipient_type: "individual",
             to: cleaned,
@@ -119,32 +179,19 @@ export async function onRequestPost(context) {
                 }
               ]
             }
-          })
-        });
+          };
+          metaRes = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(fallbackPayload)
+          });
+        }
+
         if (metaRes.ok) {
           sentCount++;
-          const poster = (offer && offer.poster_url) || (broadcast && broadcast.poster_url);
-          if (poster && typeof poster === 'string' && (poster.startsWith('http://') || poster.startsWith('https://'))) {
-            try {
-              await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
-                method: "POST",
-                headers: {
-                  "Authorization": `Bearer ${token}`,
-                  "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                  messaging_product: "whatsapp",
-                  recipient_type: "individual",
-                  to: cleaned,
-                  type: "image",
-                  image: {
-                    link: poster,
-                    caption: `🧇 *${offerName}* (${disc}) — That Waffle Place`
-                  }
-                })
-              });
-            } catch (_) {}
-          }
         } else {
           failedCount++;
         }

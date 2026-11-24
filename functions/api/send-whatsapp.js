@@ -48,7 +48,39 @@ export async function onRequestPost(context) {
     const validity = (data.starts_on && data.ends_on) ? `${data.starts_on} to ${data.ends_on}` : ((data.validity || '').trim() || 'Limited time');
     const tms = (data.terms || '').trim() || 'Terms apply.';
 
-    const payload = {
+    const hasPoster = Boolean(data.poster_url && typeof data.poster_url === 'string' && (data.poster_url.startsWith('http://') || data.poster_url.startsWith('https://')));
+
+    const payload = hasPoster ? {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: cleaned,
+      type: "template",
+      template: {
+        name: "twp_offer_poster",
+        language: { code: "en" },
+        components: [
+          {
+            type: "header",
+            parameters: [
+              {
+                type: "image",
+                image: { link: data.poster_url }
+              }
+            ]
+          },
+          {
+            type: "body",
+            parameters: [
+              { type: "text", text: custName },
+              { type: "text", text: offerName },
+              { type: "text", text: disc },
+              { type: "text", text: validity },
+              { type: "text", text: tms }
+            ]
+          }
+        ]
+      }
+    } : {
       messaging_product: "whatsapp",
       recipient_type: "individual",
       to: cleaned,
@@ -71,7 +103,7 @@ export async function onRequestPost(context) {
       }
     };
 
-    const metaRes = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
+    let metaRes = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${token}`,
@@ -80,7 +112,42 @@ export async function onRequestPost(context) {
       body: JSON.stringify(payload)
     });
 
-    const metaData = await metaRes.json();
+    let metaData = await metaRes.json();
+    if (!metaRes.ok && hasPoster) {
+      // Fallback to text template if poster link fails
+      const fallbackPayload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: cleaned,
+        type: "template",
+        template: {
+          name: "twp_offer_broadcast",
+          language: { code: "en" },
+          components: [
+            {
+              type: "body",
+              parameters: [
+                { type: "text", text: custName },
+                { type: "text", text: offerName },
+                { type: "text", text: disc },
+                { type: "text", text: validity },
+                { type: "text", text: tms }
+              ]
+            }
+          ]
+        }
+      };
+      metaRes = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(fallbackPayload)
+      });
+      metaData = await metaRes.json();
+    }
+
     if (!metaRes.ok) {
       const err = (metaData && metaData.error && metaData.error.message) || `Meta API error (${metaRes.status})`;
       return new Response(JSON.stringify({ success: false, error: err }), {
@@ -90,30 +157,6 @@ export async function onRequestPost(context) {
     }
 
     const msgId = (metaData.messages && metaData.messages[0] && metaData.messages[0].id) || 'wamid.sent';
-
-    // If poster photo is provided, send the image message
-    if (data.poster_url && typeof data.poster_url === 'string' && (data.poster_url.startsWith('http://') || data.poster_url.startsWith('https://'))) {
-      try {
-        const imgPayload = {
-          messaging_product: "whatsapp",
-          recipient_type: "individual",
-          to: cleaned,
-          type: "image",
-          image: {
-            link: data.poster_url,
-            caption: `🧇 *${offerName}* (${disc}) — That Waffle Place`
-          }
-        };
-        await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(imgPayload)
-        });
-      } catch (_) {}
-    }
 
     return new Response(JSON.stringify({
       success: true,

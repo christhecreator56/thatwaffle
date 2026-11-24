@@ -45,7 +45,39 @@ async function handleSendWhatsApp(request, env) {
     const validity = (data.starts_on && data.ends_on) ? `${data.starts_on} to ${data.ends_on}` : ((data.validity || '').trim() || 'Limited time');
     const tms = (data.terms || '').trim() || 'Terms apply.';
 
-    const payload = {
+    const hasPoster = Boolean(data.poster_url && typeof data.poster_url === 'string' && (data.poster_url.startsWith('http://') || data.poster_url.startsWith('https://')));
+
+    const payload = hasPoster ? {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: cleaned,
+      type: "template",
+      template: {
+        name: "twp_offer_poster",
+        language: { code: "en" },
+        components: [
+          {
+            type: "header",
+            parameters: [
+              {
+                type: "image",
+                image: { link: data.poster_url }
+              }
+            ]
+          },
+          {
+            type: "body",
+            parameters: [
+              { type: "text", text: custName },
+              { type: "text", text: offerName },
+              { type: "text", text: disc },
+              { type: "text", text: validity },
+              { type: "text", text: tms }
+            ]
+          }
+        ]
+      }
+    } : {
       messaging_product: "whatsapp",
       recipient_type: "individual",
       to: cleaned,
@@ -68,7 +100,7 @@ async function handleSendWhatsApp(request, env) {
       }
     };
 
-    const metaRes = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
+    let metaRes = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${token}`,
@@ -77,7 +109,41 @@ async function handleSendWhatsApp(request, env) {
       body: JSON.stringify(payload)
     });
 
-    const metaData = await metaRes.json();
+    let metaData = await metaRes.json();
+    if (!metaRes.ok && hasPoster) {
+      const fallbackPayload = {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: cleaned,
+        type: "template",
+        template: {
+          name: "twp_offer_broadcast",
+          language: { code: "en" },
+          components: [
+            {
+              type: "body",
+              parameters: [
+                { type: "text", text: custName },
+                { type: "text", text: offerName },
+                { type: "text", text: disc },
+                { type: "text", text: validity },
+                { type: "text", text: tms }
+              ]
+            }
+          ]
+        }
+      };
+      metaRes = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(fallbackPayload)
+      });
+      metaData = await metaRes.json();
+    }
+
     if (!metaRes.ok) {
       const err = (metaData && metaData.error && metaData.error.message) || `Meta API error (${metaRes.status})`;
       return new Response(JSON.stringify({ success: false, error: err }), {
@@ -87,30 +153,6 @@ async function handleSendWhatsApp(request, env) {
     }
 
     const msgId = (metaData.messages && metaData.messages[0] && metaData.messages[0].id) || 'wamid.sent';
-
-    // If poster photo is provided, send the image message
-    if (data.poster_url && typeof data.poster_url === 'string' && (data.poster_url.startsWith('http://') || data.poster_url.startsWith('https://'))) {
-      try {
-        const imgPayload = {
-          messaging_product: "whatsapp",
-          recipient_type: "individual",
-          to: cleaned,
-          type: "image",
-          image: {
-            link: data.poster_url,
-            caption: `🧇 *${offerName}* (${disc}) — That Waffle Place`
-          }
-        };
-        await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${token}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(imgPayload)
-        });
-      } catch (_) {}
-    }
 
     return new Response(JSON.stringify({
       success: true,
@@ -196,14 +238,74 @@ async function handleDispatchBroadcast(request, env) {
       const validity = (offer.starts_on && offer.ends_on) ? `${offer.starts_on} to ${offer.ends_on}` : 'Limited time';
       const tms = (offer.terms || '').trim() || 'Terms apply.';
 
+      const poster = (offer && offer.poster_url) || (broadcast && broadcast.poster_url);
+      const hasPoster = Boolean(poster && typeof poster === 'string' && (poster.startsWith('http://') || poster.startsWith('https://')));
+
+      const payload = hasPoster ? {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: cleaned,
+        type: "template",
+        template: {
+          name: "twp_offer_poster",
+          language: { code: "en" },
+          components: [
+            {
+              type: "header",
+              parameters: [
+                {
+                  type: "image",
+                  image: { link: poster }
+                }
+              ]
+            },
+            {
+              type: "body",
+              parameters: [
+                { type: "text", text: custName },
+                { type: "text", text: offerName },
+                { type: "text", text: disc },
+                { type: "text", text: validity },
+                { type: "text", text: tms }
+              ]
+            }
+          ]
+        }
+      } : {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: cleaned,
+        type: "template",
+        template: {
+          name: "twp_offer_broadcast",
+          language: { code: "en" },
+          components: [
+            {
+              type: "body",
+              parameters: [
+                { type: "text", text: custName },
+                { type: "text", text: offerName },
+                { type: "text", text: disc },
+                { type: "text", text: validity },
+                { type: "text", text: tms }
+              ]
+            }
+          ]
+        }
+      };
+
       try {
-        const metaRes = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
+        let metaRes = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${token}`,
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({
+          body: JSON.stringify(payload)
+        });
+
+        if (!metaRes.ok && hasPoster) {
+          const fallbackPayload = {
             messaging_product: "whatsapp",
             recipient_type: "individual",
             to: cleaned,
@@ -224,32 +326,19 @@ async function handleDispatchBroadcast(request, env) {
                 }
               ]
             }
-          })
-        });
+          };
+          metaRes = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(fallbackPayload)
+          });
+        }
+
         if (metaRes.ok) {
           sentCount++;
-          const poster = (offer && offer.poster_url) || (broadcast && broadcast.poster_url);
-          if (poster && typeof poster === 'string' && (poster.startsWith('http://') || poster.startsWith('https://'))) {
-            try {
-              await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
-                method: "POST",
-                headers: {
-                  "Authorization": `Bearer ${token}`,
-                  "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                  messaging_product: "whatsapp",
-                  recipient_type: "individual",
-                  to: cleaned,
-                  type: "image",
-                  image: {
-                    link: poster,
-                    caption: `🧇 *${offerName}* (${disc}) — That Waffle Place`
-                  }
-                })
-              });
-            } catch (_) {}
-          }
         } else {
           failedCount++;
         }
