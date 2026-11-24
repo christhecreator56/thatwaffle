@@ -47,15 +47,54 @@
     return d.toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   }
 
+  function convertToJpegBlob(file) {
+    return new Promise(function (resolve) {
+      if (file.type === 'image/jpeg' && file.size < MAX_BYTES) {
+        return resolve(file);
+      }
+      var img = new Image();
+      var url = URL.createObjectURL(file);
+      img.onload = function () {
+        URL.revokeObjectURL(url);
+        var canvas = document.createElement('canvas');
+        var maxDim = 1200;
+        var w = img.width || 800;
+        var h = img.height || 800;
+        if (w > maxDim || h > maxDim) {
+          if (w > h) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+        }
+        canvas.width = w;
+        canvas.height = h;
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob(function (blob) {
+          resolve(blob || file);
+        }, 'image/jpeg', 0.90);
+      };
+      img.onerror = function () {
+        URL.revokeObjectURL(url);
+        resolve(file);
+      };
+      img.src = url;
+    });
+  }
+
   function upload(file, folder) {
     if (!file) return Promise.resolve(null);
-    var ext = TYPES[file.type];
-    if (!ext) return Promise.reject(new Error('Use a JPG, PNG or WebP image.'));
-    if (file.size > MAX_BYTES) return Promise.reject(new Error('That image is over 5 MB. Choose a smaller one.'));
-    var path = folder + '/' + crypto.randomUUID() + '.' + ext;
-    return db.storage.from('media').upload(path, file, { contentType: file.type }).then(function (r) {
-      if (r.error) throw r.error;
-      return db.storage.from('media').getPublicUrl(path).data.publicUrl;
+    return convertToJpegBlob(file).then(function (jpegBlob) {
+      var path = folder + '/' + crypto.randomUUID() + '.jpg';
+      return db.storage.from('media').upload(path, jpegBlob, { contentType: 'image/jpeg', upsert: true }).then(function (r) {
+        if (r.error) throw r.error;
+        return db.storage.from('media').getPublicUrl(path).data.publicUrl;
+      });
     });
   }
   function must(r) { if (r.error) throw r.error; return r.data; }
