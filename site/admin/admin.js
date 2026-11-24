@@ -113,6 +113,21 @@
     }).catch(function () {});
   }
 
+  function resolveMediaUrl(url) {
+    if (!url) return '';
+    var u = String(url).trim();
+    if (!u) return '';
+    if (u.startsWith('http://') || u.startsWith('https://')) return u;
+    if (u.startsWith('storage/')) return 'https://hdewnmlpuznncvkyxpjn.supabase.co/' + u;
+    if (u.startsWith('/storage/')) return 'https://hdewnmlpuznncvkyxpjn.supabase.co' + u;
+    if (u.startsWith('/media/')) return 'https://hdewnmlpuznncvkyxpjn.supabase.co/storage/v1/object/public' + u;
+    if (u.startsWith('media/')) return 'https://hdewnmlpuznncvkyxpjn.supabase.co/storage/v1/object/public/' + u;
+    if (u.startsWith('/posters/')) return 'https://hdewnmlpuznncvkyxpjn.supabase.co/storage/v1/object/public/media' + u;
+    if (u.startsWith('posters/')) return 'https://hdewnmlpuznncvkyxpjn.supabase.co/storage/v1/object/public/media/' + u;
+    if (typeof location !== 'undefined' && location.origin) return location.origin + (u.startsWith('/') ? '' : '/') + u;
+    return u;
+  }
+
   function sendMetaWhatsApp(opts) {
     var rawPhone = (opts.to || '').replace(/\D/g, '');
     if (rawPhone.startsWith('0091') && rawPhone.length === 14) rawPhone = rawPhone.slice(4);
@@ -175,6 +190,40 @@
           throw new Error(err);
         }
         var msgId = (data.messages && data.messages[0] && data.messages[0].id) || 'wamid.sent';
+
+        // Deliver the offer photo/poster if available
+        var posterUrl = resolveMediaUrl(opts.poster_url || (opts.offer && opts.offer.poster_url));
+        if (posterUrl && (posterUrl.startsWith('http://') || posterUrl.startsWith('https://'))) {
+          var imgPayload = {
+            messaging_product: 'whatsapp',
+            recipient_type: 'individual',
+            to: rawPhone,
+            type: 'image',
+            image: {
+              link: posterUrl,
+              caption: '🧇 *' + offerName + '* (' + disc + ') — That Waffle Place'
+            }
+          };
+          return fetch(metaUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': 'Bearer ' + activeToken,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(imgPayload)
+          }).then(function (imgR) {
+            return imgR.json().then(function (imgData) {
+              var imgMsgId = (imgData && imgData.messages && imgData.messages[0] && imgData.messages[0].id) || msgId;
+              return { success: true, message_id: imgMsgId, mode: 'meta_live_with_photo' };
+            }).catch(function () {
+              return { success: true, message_id: msgId, mode: 'meta_live' };
+            });
+          }).catch(function (imgErr) {
+            console.warn('[WA PHOTO] Image dispatch skipped:', imgErr);
+            return { success: true, message_id: msgId, mode: 'meta_live' };
+          });
+        }
+
         return { success: true, message_id: msgId, mode: 'meta_live' };
       });
     });
@@ -195,6 +244,16 @@
     var lastErrorMsg = '';
     var chain = Promise.resolve();
 
+    var offerPoster = (offer && offer.poster_url) || '';
+    if (!offerPoster && broadcastId) {
+      var foundB = broadcasts.find(function (x) { return x.id === broadcastId; });
+      if (foundB && foundB.poster_url) offerPoster = foundB.poster_url;
+    }
+    if (!offerPoster && offer && offer.id) {
+      var matchO = offers.find(function (x) { return x.id === offer.id; });
+      if (matchO && matchO.poster_url) offerPoster = matchO.poster_url;
+    }
+
     targets.forEach(function (c) {
       chain = chain.then(function () {
         return sendMetaWhatsApp({
@@ -205,6 +264,7 @@
           starts_on: offer.starts_on,
           ends_on: offer.ends_on,
           terms: offer.terms,
+          poster_url: offerPoster,
           custom_message: offer.custom_message
         }).then(function () {
           sent++;
@@ -1800,6 +1860,9 @@
         poster_url: b.poster_url || '',
         custom_message: b.custom_message || ''
       };
+      if (!matchingOffer.poster_url && b.poster_url) {
+        matchingOffer.poster_url = b.poster_url;
+      }
 
       console.log('[SCHEDULER] Auto-dispatching due scheduled broadcast:', b.id, matchingOffer.name);
       var subList = customers.filter(function (c) { return c.is_subscribed; });
@@ -2015,7 +2078,7 @@
           savedOffer.ends_on = end;
           savedOffer.terms = row.terms;
           savedOffer.custom_message = customMsgVal;
-          if (row.poster_url) savedOffer.poster_url = row.poster_url;
+          savedOffer.poster_url = (row && row.poster_url) || savedOffer.poster_url || (editingOffer && editingOffer.poster_url) || '';
 
           if (doBroadcast || sendImmediately) {
             var scheduledIso = sendImmediately ? new Date().toISOString() : (btime ? new Date(btime).toISOString() : new Date().toISOString());

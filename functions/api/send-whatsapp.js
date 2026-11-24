@@ -90,6 +90,31 @@ export async function onRequestPost(context) {
     }
 
     const msgId = (metaData.messages && metaData.messages[0] && metaData.messages[0].id) || 'wamid.sent';
+
+    // If poster photo is provided, send the image message
+    if (data.poster_url && typeof data.poster_url === 'string' && (data.poster_url.startsWith('http://') || data.poster_url.startsWith('https://'))) {
+      try {
+        const imgPayload = {
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: cleaned,
+          type: "image",
+          image: {
+            link: data.poster_url,
+            caption: `🧇 *${offerName}* (${disc}) — That Waffle Place`
+          }
+        };
+        await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(imgPayload)
+        });
+      } catch (_) {}
+    }
+
     return new Response(JSON.stringify({
       success: true,
       message_id: msgId,

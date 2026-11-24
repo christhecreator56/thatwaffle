@@ -87,6 +87,31 @@ async function handleSendWhatsApp(request, env) {
     }
 
     const msgId = (metaData.messages && metaData.messages[0] && metaData.messages[0].id) || 'wamid.sent';
+
+    // If poster photo is provided, send the image message
+    if (data.poster_url && typeof data.poster_url === 'string' && (data.poster_url.startsWith('http://') || data.poster_url.startsWith('https://'))) {
+      try {
+        const imgPayload = {
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          to: cleaned,
+          type: "image",
+          image: {
+            link: data.poster_url,
+            caption: `🧇 *${offerName}* (${disc}) — That Waffle Place`
+          }
+        };
+        await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(imgPayload)
+        });
+      } catch (_) {}
+    }
+
     return new Response(JSON.stringify({
       success: true,
       message_id: msgId,
@@ -203,6 +228,28 @@ async function handleDispatchBroadcast(request, env) {
         });
         if (metaRes.ok) {
           sentCount++;
+          const poster = (offer && offer.poster_url) || (broadcast && broadcast.poster_url);
+          if (poster && typeof poster === 'string' && (poster.startsWith('http://') || poster.startsWith('https://'))) {
+            try {
+              await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
+                method: "POST",
+                headers: {
+                  "Authorization": `Bearer ${token}`,
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                  messaging_product: "whatsapp",
+                  recipient_type: "individual",
+                  to: cleaned,
+                  type: "image",
+                  image: {
+                    link: poster,
+                    caption: `🧇 *${offerName}* (${disc}) — That Waffle Place`
+                  }
+                })
+              });
+            } catch (_) {}
+          }
         } else {
           failedCount++;
         }

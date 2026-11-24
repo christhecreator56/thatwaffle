@@ -123,6 +123,28 @@ export async function onRequestPost(context) {
         });
         if (metaRes.ok) {
           sentCount++;
+          const poster = (offer && offer.poster_url) || (broadcast && broadcast.poster_url);
+          if (poster && typeof poster === 'string' && (poster.startsWith('http://') || poster.startsWith('https://'))) {
+            try {
+              await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
+                method: "POST",
+                headers: {
+                  "Authorization": `Bearer ${token}`,
+                  "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                  messaging_product: "whatsapp",
+                  recipient_type: "individual",
+                  to: cleaned,
+                  type: "image",
+                  image: {
+                    link: poster,
+                    caption: `🧇 *${offerName}* (${disc}) — That Waffle Place`
+                  }
+                })
+              });
+            } catch (_) {}
+          }
         } else {
           failedCount++;
         }
