@@ -320,7 +320,7 @@
         if (localB && localB.status === 'processing') {
           localB.status = 'failed';
         }
-        db.from('broadcasts').update({ status: 'failed', completed_at: new Date().toISOString() }).eq('id', broadcastId).catch(function () {});
+        db.from('broadcasts').update({ status: 'failed', completed_at: new Date().toISOString() }).eq('id', broadcastId).then(function () {}, function () {});
       }
       throw err;
     });
@@ -1828,7 +1828,7 @@
         console.warn('[SCHEDULER] Auto-reconciled stuck processing broadcast ' + b.id + ' -> ' + recovered);
         b.status = recovered;
         reconciledAny = true;
-        db.from('broadcasts').update({ status: recovered }).eq('id', b.id).catch(function () {});
+        db.from('broadcasts').update({ status: recovered }).eq('id', b.id).then(function () {}, function () {});
       }
     });
     if (reconciledAny) {
@@ -1882,7 +1882,7 @@
         return;
       }
 
-      db.from('broadcasts').update({ status: 'processing' }).eq('id', b.id).catch(function () {});
+      db.from('broadcasts').update({ status: 'processing' }).eq('id', b.id).then(function () {}, function () {});
 
       dispatchMetaBroadcast(b.id, matchingOffer, subList).then(function (res) {
         toast('🚀 Scheduled WhatsApp broadcast for "' + matchingOffer.name + '" was dispatched to ' + (res.sent || 0) + ' customer(s)!');
